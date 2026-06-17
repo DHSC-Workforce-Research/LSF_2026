@@ -26,3 +26,7 @@ panel_files <- function() {
     list.files(pattern = "Yearly Comparison.*\\.xlsx$", full.names = TRUE) |>
     sort()
 }
+
+fs <- list.files("functions", full.names = TRUE)
+fs[sapply(fs, function(f)
+  any(grepl("walk\\(|source\\(|list\\.files\\(", readLines(f, warn = FALSE))))]
