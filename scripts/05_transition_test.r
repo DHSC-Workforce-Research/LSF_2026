@@ -32,13 +32,8 @@ trans <- long |>
 
 cat("Does 'considered leaving' in year t predict leaving?\n")
 cat("(continuing students, t = 2021-2024, still expected enrolled in t+1)\n\n")
-print(
-  trans |>
-    group_by(considered_leaving = leave_course) |>
-    summarise(
-      n             = n(),
-      absent_next   = round(mean(absent_next),   3),
-      gone_for_good = round(mean(gone_for_good), 3),
-      .groups = "drop"
-    )
-)
+cat("absent next year, by considered-leaving:\n")
+print(rate_by(trans, "leave_course", outcome = "absent_next"))
+
+cat("\ngone for good, by considered-leaving:\n")
+print(rate_by(trans, "leave_course", outcome = "gone_for_good"))
