@@ -1,5 +1,4 @@
 # 98_extract_questionnaire.r  -  scrape the questionnaire, NO extra packages
-#   (.docx is a zip; we read word/document.xml directly out of it)
 library(dplyr); library(stringr); library(purrr); library(tibble); library(readr)
 purrr::walk(list.files("functions", full.names = TRUE), source)
 
@@ -12,10 +11,16 @@ pick     <- docx_files[grepl("question|survey|instrument", docx_files, ignore.ca
 doc_path <- if (length(pick) >= 1) pick[1] else docx_files[1]
 message("Using questionnaire: ", basename(doc_path))
 
-# --- read word/document.xml straight from the zip -----------------------
-con <- unz(doc_path, "word/document.xml")
-xml <- paste(readLines(con, warn = FALSE, encoding = "UTF-8"), collapse = "")
-close(con)
+# --- copy local first (forces OneDrive to hydrate the file), then unzip --
+local_copy <- file.path(tempdir(), "questionnaire.docx")
+ok <- file.copy(doc_path, local_copy, overwrite = TRUE)
+stopifnot("Could not copy the .docx locally" = isTRUE(ok),
+          "Copied file looks empty (OneDrive placeholder?)" = file.size(local_copy) > 1000)
+
+xml_dir <- file.path(tempdir(), "docx_xml")
+unzip(local_copy, files = "word/document.xml", exdir = xml_dir)
+xml <- paste(readLines(file.path(xml_dir, "word", "document.xml"),
+                       warn = FALSE, encoding = "UTF-8"), collapse = "")
 
 # --- rebuild one string per paragraph (<w:p>) from its <w:t> text runs ---
 unescape <- function(x) x |>
