@@ -10,6 +10,7 @@
 # self-selects its valid rows. Reused by the rate_by cross-tabs and the models.
 # ---------------------------------------------------------------------------
 build_funding_leaving_sample <- function(long, traj) {
+  progress("  sample: entry (first-year) funding records ...")
   entry <- long |>
     dplyr::filter(first_year == TRUE) |>
     dplyr::group_by(UniqueID) |>
@@ -21,9 +22,9 @@ build_funding_leaving_sample <- function(long, traj) {
       funding_imp_crse = suppressWarnings(as.integer(funding_influence_course)),
       grant_helps_stay = stringr::str_detect(
         dplyr::coalesce(grant_difference, ""),
-        stringr::regex("stay on the course", ignore_case = TRUE))
-    )
+        stringr::regex("stay on the course", ignore_case = TRUE)))
 
+  progress("  sample: first continuing-wave leave_course ...")
   considered <- long |>
     dplyr::filter(first_year == FALSE, !is.na(leave_course)) |>
     dplyr::group_by(UniqueID) |>
@@ -31,13 +32,17 @@ build_funding_leaving_sample <- function(long, traj) {
     dplyr::ungroup() |>
     dplyr::transmute(UniqueID, considered_leaving = leave_course)
 
+  progress("  sample: behavioural (left-early) flag ...")
   behaviour <- traj |>
     dplyr::transmute(
       UniqueID, last_wave, expected_finish,
       left_early = dplyr::if_else(expected_finish <= 2025,
                                   last_wave < expected_finish, NA))
 
-  entry |>
+  progress("  sample: joining ...")
+  out <- entry |>
     dplyr::left_join(considered, by = "UniqueID") |>
     dplyr::left_join(behaviour,  by = "UniqueID")
+  progress("  sample: done, ", nrow(out), " students")
+  out
 }
