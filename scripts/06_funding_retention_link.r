@@ -56,3 +56,25 @@ print(rate_by(b, "funding_imp_uni"))
 
 cat("\nby funding importance to WHAT to study (1-5):\n")
 print(rate_by(b, "funding_imp_crse"))
+
+
+# --- behavioural robustness: funding influence vs ACTUALLY leaving early ----
+# left_early = stopped claiming before expected finish. NB this is the noisier
+# behavioural measure (conflates real dropout with non-reclaim) and it depends
+# on the course_length = 3 assumption via expected_finish, so read it as a
+# direction check, not a clean rate. Restricted to students who should have
+# finished within fully-observed waves (expected_finish <= 2025).
+traj <- read_csv(file.path(derived_dir(), "lsf_trajectories_classified_2020_2026.csv"),
+                 show_col_types = FALSE)
+
+beh <- entry |>
+  inner_join(traj |> select(UniqueID, last_wave, expected_finish), by = "UniqueID") |>
+  filter(!is.na(expected_finish), expected_finish <= 2025) |>
+  mutate(left_early = last_wave < expected_finish)
+
+cat("\nBEHAVIOURAL outcome: actually left before expected finish\n")
+cat("overall left-early rate:", round(mean(beh$left_early), 3), "\n\n")
+print(rate_by(beh, "grant_influence",  outcome = "left_early"))
+print(rate_by(beh, "grant_helps_stay", outcome = "left_early"))
+print(rate_by(beh, "funding_imp_uni",  outcome = "left_early"))
+print(rate_by(beh, "funding_imp_crse", outcome = "left_early"))
