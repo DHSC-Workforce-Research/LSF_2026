@@ -46,13 +46,18 @@ modelsummary(tab_models, exponentiate = TRUE, statistic = "conf.int",
 progress("drawing forest plots ...")
 grid <- read_csv(file.path(outputs_dir(), "lsf_robustness_grid_long.csv"), show_col_types = FALSE)
 
-# leading definition of leaving for the headline chart (change to taste)
-headline_outcome <- "left_before_finish"
+headline_outcome <- "left_before_finish"   # leading definition (change title below if you change this)
 
-# severity order, mild signal -> hardest outcome (reached_finish dropped: opposite polarity)
+# explicit OR breaks so the >1 side actually gets labelled on the log scale
+or_breaks <- c(0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 2.0)
+
+# shared text
+spec_note <- "Logistic regression: leaving ~ predictor + course fixed effects + cohort fixed effects. Odds ratios, 95% Wald CI."
+def_text  <- "Defined as leaving the course before reaching its expected final wave (did not complete)."
+src       <- "Source: NHS Learning Support Fund longitudinal panel 2020-2026. DHSC analysis."
+
 sev_order <- c("considered_ever","considered_first","one_wave_only",
                "left_after_year1","left_2y_plus_early","left_final_year_only","left_before_finish")
-
 lab_out <- c(left_before_finish="Left before finish (any)", left_final_year_only="Stopped in final year",
              left_2y_plus_early="Left 2+ years early", left_after_year1="Dropped after year 1",
              one_wave_only="Claimed once, never again", considered_first="Considered leaving (first wave)",
@@ -62,7 +67,6 @@ lab_pred <- c(fund_availability="Aware of grant before applying", grant_influenc
               "I(funding_imp_uni >= 4)"="Funding critical to WHERE to study",
               grant_helps_stay="Grant helps me stay")
 
-# significance flag: CI excluding 1 is significant; otherwise grey
 sig_levels <- c("More likely to leave", "Less likely (protective)", "Not significant")
 sig_cols <- c("More likely to leave"      = unname(dhsc_cols[["risk"]]),
               "Less likely (protective)"  = unname(dhsc_cols[["good"]]),
@@ -74,7 +78,7 @@ flag_sig <- function(df) df |>
                                  TRUE               ~ "Less likely (protective)"),
                        levels = sig_levels))
 
-# (2a) HEADLINE: one definition, all factors, OR labelled --------------------
+# (2a) HEADLINE ---------------------------------------------------------------
 head_df <- grid |>
   filter(outcome == headline_outcome, predictor %in% names(lab_pred)) |>
   mutate(predictor = factor(predictor, levels = rev(names(lab_pred)), labels = rev(lab_pred))) |>
@@ -86,35 +90,35 @@ p_head <- ggplot(head_df, aes(OR, predictor, colour = flag)) +
   geom_point(size = 3) +
   geom_text(aes(label = sprintf("%.2f", OR)), colour = dhsc_cols[["ink"]],
             vjust = -1, size = 3, show.legend = FALSE) +
-  scale_x_log10() +
+  scale_x_log10(breaks = or_breaks, expand = expansion(mult = c(0.05, 0.10))) +
   scale_colour_manual(values = sig_cols, drop = FALSE) +
-  labs(title    = paste0("What predicts ", tolower(lab_out[[headline_outcome]]), "?"),
-       subtitle = "Odds ratios with 95% CI. Grey = not significant. Course and cohort fixed effects. Associational, not causal.",
+  labs(title    = "What predicts student non-completion?",
+       subtitle = def_text,
        x = "Odds ratio  (right of 1 = more likely to leave)", y = NULL, colour = NULL,
-       caption = "Source: NHS Learning Support Fund longitudinal panel 2020-2026. DHSC analysis.") +
+       caption = paste(spec_note, src, sep = "\n")) +
   theme_dhsc()
 save_dhsc(p_head, file.path(outputs_dir(), "lsf_forest_headline.png"), width = 9, height = 5)
 
-# (2b) FULL GRID: facet by definition of leaving, all factors ----------------
+# (2b) FULL GRID --------------------------------------------------------------
 grid_df <- grid |>
   filter(outcome %in% sev_order, predictor %in% names(lab_pred)) |>
   mutate(outcome   = factor(outcome,   levels = sev_order,            labels = lab_out[sev_order]),
          predictor = factor(predictor, levels = rev(names(lab_pred)), labels = rev(lab_pred))) |>
   flag_sig()
 
-xr <- range(c(grid_df$lo, grid_df$hi), na.rm = TRUE)   # shared range, drawn on every panel
+xr <- range(c(grid_df$lo, grid_df$hi), na.rm = TRUE)
 
 p_grid <- ggplot(grid_df, aes(OR, predictor, colour = flag)) +
   geom_vline(xintercept = 1, linetype = "dashed", colour = dhsc_cols[["midgrey"]]) +
   geom_errorbarh(aes(xmin = lo, xmax = hi), height = .25, linewidth = .5) +
   geom_point(size = 2.2) +
-  scale_x_log10(limits = xr) +
+  scale_x_log10(limits = xr, breaks = or_breaks) +
   scale_colour_manual(values = sig_cols, drop = FALSE) +
-  facet_wrap(~outcome, ncol = 4, scales = "free_x") +   # free_x + fixed limits = same scale, axis on every panel
+  facet_wrap(~outcome, ncol = 4, scales = "free_x") +
   labs(title    = "How funding-dependence factors relate to each definition of leaving",
-       subtitle = "Odds ratios (log scale) with 95% CI. Grey = not significant. Course and cohort fixed effects. Associational, not causal.",
+       subtitle = paste("Each panel is a different definition of leaving.", spec_note),
        x = "Odds ratio  (right of 1 = more likely to leave)", y = NULL, colour = NULL,
-       caption = "Source: NHS Learning Support Fund longitudinal panel 2020-2026. DHSC analysis.") +
+       caption = src) +
   theme_dhsc() +
   theme(panel.spacing = grid::unit(1, "lines"))
 save_dhsc(p_grid, file.path(outputs_dir(), "lsf_forest_grid.png"), width = 13, height = 7.5)
