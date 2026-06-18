@@ -15,8 +15,10 @@ traj <- read_csv(
 )
 
 # --- classify: literal (face value) and cautious (course-length anchored) -
-panel_max <- max(traj$last_wave)                 # 2026, the data boundary
-traj <- classify_outcome(traj, panel_max_year = panel_max)
+panel_max <- max(traj$last_wave)
+course_lengths <- build_course_lengths(traj)                 # <- NEW: data-driven lengths
+traj <- classify_outcome(traj, panel_max_year = panel_max,   # <- add the len_overrides arg
+                         len_overrides = course_lengths)
 
 # --- view 1: the full cautious split, including the honest censored / -----
 #     no_entry_observed buckets we can't classify
