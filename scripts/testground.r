@@ -18,3 +18,4 @@ profile_cols <- function(df, top = 6) {
 prof <- profile_cols(long)            # or profile_cols(sample)
 View(prof)                            # sortable grid, now your session is attached
 write_csv(prof, file.path(derived_dir(), "lsf_column_profile.csv"))
+
