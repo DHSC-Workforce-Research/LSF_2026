@@ -19,7 +19,7 @@ sample <- build_funding_leaving_sample(long, traj) |> define_leaving_outcomes() 
 conf_cw <- long |> filter(first_year == FALSE, !is.na(confidence)) |>
   arrange(UniqueID, year) |> group_by(UniqueID) |> slice_head(n = 1) |> ungroup() |>
   select(UniqueID, confidence)
-sample <- left_join(sample, conf_cw, by = "UniqueID")
+sample <- left_join(sample, conf_cw, by = "UniqueID") #hello
 stopifnot(fin_var %in% names(sample))
 
 # same-sample base: predictors + confidence present, so only the regressors move
