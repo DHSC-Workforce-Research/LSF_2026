@@ -29,8 +29,14 @@ define_leaving_outcomes <- function(df) {
     left_after_year1      = dplyr::if_else(obs_window,
                               last_wave == course_first_year_wave &
                               expected_finish > course_first_year_wave, NA),
-    # Claimed once and never again (n_waves == 1). Definition-light, no finish needed.
-    one_wave_only         = n_waves == 1,
+    # Claimed once and never again (n_waves == 1). Definition-light, no finish
+    # needed. GATED so a brand-new entrant in the final wave (who has had no
+    # chance to reappear) is NA rather than a false "leaver". Keeps anyone who
+    # entered before the last observed wave and so had at least one opportunity
+    # to return. Panel max derived from the data, not hard-coded.
+    one_wave_only         = dplyr::if_else(
+                              course_first_year_wave < max(last_wave, na.rm = TRUE),
+                              n_waves == 1L, NA),
 
     # SELF-REPORT (intention; continuing students only)
     # Thought about leaving, first continuing wave (leave_course == TRUE, first year-2+ response).
