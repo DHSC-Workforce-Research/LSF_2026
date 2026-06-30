@@ -1,15 +1,22 @@
 # ---------------------------------------------------------------------------
 # define_leaving_outcomes(): every leaving definition in ONE editable place.
 # Each flag: plain meaning, then the technical condition. Behavioural flags are
-# only defined inside the fully-observed window (expected finish <= 2025), else
-# NA. Self-report flags only exist for students actually asked (a continuing
+# only defined inside the fully-observed window (expected finish <= panel_max-1),
+# else NA. Self-report flags only exist for students actually asked (a continuing
 # wave). Edit conditions here and nowhere else.
+# panel_max is derived from the data (latest wave seen), so the window and the
+# one-wave gate extend themselves when a new wave lands. Nothing is hard-coded.
 # Needs: last_wave, expected_finish, course_first_year_wave, n_waves,
 #        considered_leaving (first continuing wave), ever_considered_leaving.
 # ---------------------------------------------------------------------------
 define_leaving_outcomes <- function(df) {
+  panel_max <- max(df$last_wave, na.rm = TRUE)   # latest wave in the data (e.g. 2026)
+
   dplyr::mutate(df,
-    obs_window  = !is.na(expected_finish) & expected_finish <= 2025,
+    # Fully-observed window: course should have finished at least one wave before
+    # the latest data we hold (the -1 keeps a conservative buffer for students
+    # whose expected finish is the very last wave and so are ambiguous).
+    obs_window  = !is.na(expected_finish) & expected_finish <= panel_max - 1L,
     years_early = expected_finish - last_wave,
 
     # COMPLETION
@@ -33,10 +40,9 @@ define_leaving_outcomes <- function(df) {
     # needed. GATED so a brand-new entrant in the final wave (who has had no
     # chance to reappear) is NA rather than a false "leaver". Keeps anyone who
     # entered before the last observed wave and so had at least one opportunity
-    # to return. Panel max derived from the data, not hard-coded.
-    one_wave_only         = dplyr::if_else(
-                              course_first_year_wave < max(last_wave, na.rm = TRUE),
-                              n_waves == 1L, NA),
+    # to return.
+    one_wave_only         = dplyr::if_else(course_first_year_wave < panel_max,
+                                           n_waves == 1L, NA),
 
     # SELF-REPORT (intention; continuing students only)
     # Thought about leaving, first continuing wave (leave_course == TRUE, first year-2+ response).
