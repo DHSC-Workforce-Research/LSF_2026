@@ -49,3 +49,6 @@ po/*~
 rsconnect/
 scripts/testground.r
 scripts/test2.r
+*.png
+*.html
+*_files/
