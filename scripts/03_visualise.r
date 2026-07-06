@@ -46,7 +46,7 @@ p0 <- ggplot(qz, aes(year, measure, fill = block)) +
   geom_tile(width = .92, height = .72, colour = "white", linewidth = 1.2) +
   scale_x_continuous(breaks = 1:4, labels = paste("Year", 1:4), position = "top", limits = c(0.5, 4.5), expand = c(0, 0)) +
   scale_fill_manual(values = setNames(c(teal, orange, dcol("af_blue", "#12436D")), blocks_lv)) +
-  labs(title = "When the survey asks each question, and why it matters for the analysis",
+  labs(title = "WKey measures start too late to catch first-year leavers,
        subtitle = "The questionnaire changes after Year 1. Anything measured only from Year 2 (financial confidence, considered leaving) can\nonly be analysed on students who reached Year 2, so any model using it drops everyone who left in the first year.",
        x = NULL, y = NULL, fill = NULL,
        caption = wrapcap("Year 4 applies to 4-year courses only, and final-year answers cannot be checked against a later drop. Source: LSF questionnaire structure.")) +
