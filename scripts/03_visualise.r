@@ -1,153 +1,208 @@
 # =====================================================================
-# 03_visualise.R
-# Tidy result tables (from 02)  ->  DHSC widescreen slides (PNG).
-# Reads tbl_*.csv from outputs, writes slide_*.png back. Pure presentation.
-# Title = plain-English finding; subtitle = technical definition of the metric.
-# Run:  source("scripts/03_visualise.R")
+# 03_visualise.R  -  tidy tables (from 02) -> DHSC slides (PNG).
+# Finding text (titles, subtitles, AUC box) is read from slide_labels.json
+# in the secure data folder, NOT stored here. Missing file => no titles.
+# Run after 01, 02.
 # =====================================================================
 purrr::walk(list.files("functions", full.names = TRUE), source)
 library(dplyr); library(readr); library(ggplot2); library(tidyr); library(stringr)
 out <- outputs_dir()
 rd  <- function(f) read_csv(file.path(out, f), show_col_types = FALSE)
-
+wrapcap <- function(x, w = 135) str_wrap(x, w)
 risk <- dcol("risk", "#D4351C"); teal <- dcol("af_teal", "#28A197")
-grey <- dcol("midgrey", "#6F777B"); ink <- dcol("ink", "#0B0C0C")
-src  <- "Source: NHS Learning Support Fund panel 2020-2026, DHSC analysis."
+orange <- dcol("af_orange", "#F46A25"); grey <- dcol("midgrey", "#6F777B"); ink <- dcol("ink", "#0B0C0C")
+src <- "Source: NHS Learning Support Fund panel 2020-2026, DHSC analysis."
+capt_theme <- theme(plot.caption = element_text(lineheight = 1.15))
 pred_levels <- rev(c("Aware of grant before applying", "Grant influenced enrolment",
-                     "Grant helps me stay", "Funding critical to WHERE to study",
-                     "Funding critical to WHAT to study"))
+                     "Grant helps me stay", "Funding critical to WHERE to study", "Funding critical to WHAT to study"))
+
+# labels live with the data, not the code; missing file -> blank titles
+lbl <- local({
+  path <- file.path(derived_dir(), "slide_labels.json")
+  L <- if (requireNamespace("jsonlite", quietly = TRUE) && file.exists(path)) jsonlite::fromJSON(path) else list()
+  if (!length(L)) message("NOTE: slide_labels.json not found or unreadable; slides render without titles.")
+  function(slide, field, default = "") {
+    v <- tryCatch(L[[slide]][[field]], error = function(e) NULL)
+    if (is.null(v) || length(v) == 0 || (length(v) == 1 && is.na(v))) default else v
+  }
+})
+
+# --- slide 0: when each question is asked (survey structure) ---------
+blocks_lv <- c("Asked at entry (Year 1)", "Asked each continuing year (Year 2 on)", "Observed every year")
+measures <- tibble::tribble(
+  ~block,       ~measure,                                          ~from, ~to,
+  blocks_lv[1], "Aware of the grant beforehand",                       1, 1,
+  blocks_lv[1], "Grant influenced enrolment",                          1, 1,
+  blocks_lv[1], "Funding critical to course or university",            1, 1,
+  blocks_lv[1], "Grant components applied for (parental, etc.)",       1, 1,
+  blocks_lv[2], "Financial confidence",                                2, 4,
+  blocks_lv[2], "Considered leaving this year",                        2, 4,
+  blocks_lv[2], "Expects to finish on time",                           2, 4,
+  blocks_lv[3], "Still claiming (our leaving measure)",                1, 4)
+mlev <- rev(measures$measure)
+qz <- measures |> rowwise() |> mutate(year = list(seq(from, to))) |> tidyr::unnest(year) |> ungroup() |>
+  mutate(measure = factor(measure, levels = mlev), block = factor(block, levels = blocks_lv))
+p0 <- ggplot(qz, aes(year, measure, fill = block)) +
+  geom_tile(width = .92, height = .72, colour = "white", linewidth = 1.2) +
+  scale_x_continuous(breaks = 1:4, labels = paste("Year", 1:4), position = "top", limits = c(0.5, 4.5), expand = c(0, 0)) +
+  scale_fill_manual(values = setNames(c(teal, orange, dcol("af_blue", "#12436D")), blocks_lv)) +
+  labs(title = "When the survey asks each question, and why it matters for the analysis",
+       subtitle = "The questionnaire changes after Year 1. Anything measured only from Year 2 (financial confidence, considered leaving) can\nonly be analysed on students who reached Year 2, so any model using it drops everyone who left in the first year.",
+       x = NULL, y = NULL, fill = NULL,
+       caption = wrapcap("Year 4 applies to 4-year courses only, and final-year answers cannot be checked against a later drop. Source: LSF questionnaire structure.")) +
+  theme_dhsc_slide(base = 15) + capt_theme +
+  theme(legend.position = "top", panel.grid = element_blank(),
+        axis.text.y = element_text(hjust = 0), axis.ticks = element_blank())
+save_slide(p0, file.path(out, "slide_question_timing.png"))
 
 # --- slide 1: AUC ----------------------------------------------------
-dec <- rd("tbl_auc_decile.csv")
-sm  <- rd("tbl_auc_summary.csv") |> filter(outcome == "left_before_finish")
-base <- sm$base_rate * 100; a <- sm$auc_survey
-dec <- dec |> mutate(top = decile == max(decile))
-lab_auc <- sprintf(paste0("What is AUC? %.2f here.\n",
-  "Pick one student who left and one who didn't, at random.\n",
-  "The model rates the leaver as higher-risk just %.0f%% of the\n",
-  "time. A coin toss is 50%%; a useful test scores 70%% or more."), a, 100 * a)
+dec <- rd("tbl_auc_decile.csv"); sm <- rd("tbl_auc_summary.csv") |> filter(outcome == "left_before_finish")
+base <- sm$base_rate * 100; a <- sm$auc_survey; dec <- dec |> mutate(top = decile == max(decile))
 p1 <- ggplot(dec, aes(decile, leave_rate)) +
   geom_hline(yintercept = base, linetype = "dashed", colour = grey, linewidth = .6) +
   geom_col(aes(fill = top), width = .78, show.legend = FALSE) +
   geom_text(aes(label = sprintf("%.0f%%", leave_rate)), vjust = -0.6, size = 4.2, colour = ink) +
-  annotate("label", x = 0.55, y = 58, hjust = 0, vjust = 1, label = lab_auc,
-           fill = dcol("gridgrey", "#E6E6E6"), colour = ink, label.size = 0, size = 4.1, lineheight = 1.03) +
-  annotate("text", x = 0.6, y = base + 2.2, hjust = 0, label = sprintf("Average, %.0f%%", base), colour = grey, size = 4.2) +
-  scale_fill_manual(values = c(`FALSE` = teal, `TRUE` = dcol("af_orange", "#F46A25"))) +
+  annotate("text", x = 0.6, y = base + 2.2, hjust = 0, label = sprintf("Overall average, %.0f%%", base), colour = grey, size = 4.2) +
+  scale_fill_manual(values = c(`FALSE` = teal, `TRUE` = orange)) +
   scale_x_continuous(breaks = 1:10, labels = c("Lowest\npredicted\nrisk", 2:9, "Highest\npredicted\nrisk"), expand = expansion(add = .6)) +
   scale_y_continuous(limits = c(0, 62), breaks = seq(0, 50, 10), labels = \(z) paste0(z, "%")) +
-  labs(title = "We cannot predict which individual students will leave",
-       subtitle = "Students split into ten equal groups by a model's predicted risk of leaving, using all five entry funding answers. Bars show\nthe share in each group who actually left before finishing (n = 128,109).",
-       x = "Students ranked by the model's predicted risk of leaving (lowest to highest)",
-       y = "Share who left before finishing",
-       caption = paste("Logistic model of the five entry funding items.", src)) +
-  theme_dhsc_slide(base = 15) + theme(panel.grid.major.x = element_blank(), plot.caption = element_text(lineheight = 1.15), plot.margin = margin(16, 22, 12, 12))
+  labs(title = lbl("auc","title"), subtitle = lbl("auc","subtitle"),
+       x = "Students ranked by the model's predicted risk of leaving (lowest to highest)", y = "Share who left before finishing",
+       caption = wrapcap(paste("Logistic model of the five entry funding items.", src))) +
+  theme_dhsc_slide(base = 15) + capt_theme + theme(panel.grid.major.x = element_blank(), plot.margin = margin(16, 22, 12, 12))
+box_txt <- lbl("auc","box")
+if (nzchar(box_txt)) p1 <- p1 + annotate("label", x = 0.55, y = 58, hjust = 0, vjust = 1, label = sprintf(box_txt, a, 100 * a),
+                                         fill = dcol("gridgrey", "#E6E6E6"), colour = ink, label.size = 0, size = 4.1, lineheight = 1.03)
 save_slide(p1, file.path(out, "slide_auc.png"))
 
-# --- slide 2: factors ranked ----------------------------------------
+# --- slide 2: factors ----------------------------------------------
 fac <- rd("tbl_factors.csv") |> mutate(direction = ifelse(OR >= 1, "More likely to leave", "Less likely to leave")) |> arrange(OR)
 fac$factor <- factor(fac$factor, levels = fac$factor)
 p2 <- ggplot(fac, aes(OR, factor, colour = direction)) +
   geom_vline(xintercept = 1, linetype = "dashed", colour = grey) +
-  geom_errorbarh(aes(xmin = lo, xmax = hi), height = .25, linewidth = .5) +
-  geom_point(size = 3.2) +
+  geom_errorbarh(aes(xmin = lo, xmax = hi), height = .25, linewidth = .5) + geom_point(size = 3.2) +
   geom_text(aes(label = sprintf("%.2f", OR)), vjust = -1.1, size = 3.6, show.legend = FALSE) +
   scale_x_continuous(breaks = seq(0.8, 1.3, 0.1)) +
   scale_colour_manual(values = c("More likely to leave" = risk, "Less likely to leave" = teal)) +
-  labs(title = "No single factor strongly predicts who leaves",
-       subtitle = "Adjusted odds of leaving before finishing for students with each characteristic versus those without, holding course and\ncohort equal. 1.0 = no difference; bars are 95% confidence intervals (narrow because the sample is very large).",
+  labs(title = lbl("factors","title"), subtitle = lbl("factors","subtitle"),
        x = "Odds of leaving before finishing (1.0 = no difference)", y = NULL, colour = NULL,
-       caption = paste("Single-factor logistic models, course and cohort fixed effects.", src)) +
-  theme_dhsc_slide(base = 15) + theme(legend.position = "top")
+       caption = wrapcap(paste("Single-factor logistic models, course and cohort fixed effects.", src))) +
+  theme_dhsc_slide(base = 15) + capt_theme + theme(legend.position = "top")
 save_slide(p2, file.path(out, "slide_factors.png"))
 
-# --- slide 3: worry vs behaviour ------------------------------------
-grid <- rd("tbl_or_grid.csv") |>
-  filter(outcome %in% c("Considered leaving", "Left before finishing")) |>
+# --- slide 3: worry vs behaviour -----------------------------------
+grid <- rd("tbl_or_grid.csv") |> filter(outcome %in% c("Considered leaving", "Left before finishing")) |>
   mutate(direction = ifelse(OR >= 1, "More likely", "Less likely"),
-         outcome   = factor(outcome, levels = c("Considered leaving", "Left before finishing")),
-         predictor = factor(predictor, levels = pred_levels))
+         outcome = factor(outcome, levels = c("Considered leaving", "Left before finishing")), predictor = factor(predictor, levels = pred_levels))
 p3 <- ggplot(grid, aes(OR, predictor, colour = direction)) +
   geom_vline(xintercept = 1, linetype = "dashed", colour = grey) +
-  geom_errorbarh(aes(xmin = lo, xmax = hi), height = .2, linewidth = .5) +
-  geom_point(size = 3) +
+  geom_errorbarh(aes(xmin = lo, xmax = hi), height = .2, linewidth = .5) + geom_point(size = 3) +
   geom_text(aes(label = sprintf("%.2f", OR)), vjust = -1, size = 3.3, show.legend = FALSE) +
-  scale_x_continuous(breaks = seq(0.8, 1.8, 0.2)) +
-  scale_colour_manual(values = c("More likely" = risk, "Less likely" = teal)) +
-  facet_wrap(~outcome) +
-  labs(title = "Relying on the grant predicts worry, not leaving",
-       subtitle = "Odds of considering leaving, and of actually leaving before finishing, for students giving each answer versus those who\ndid not. Same predictors, two outcomes.",
+  scale_x_continuous(breaks = seq(0.8, 1.8, 0.2)) + scale_colour_manual(values = c("More likely" = risk, "Less likely" = teal)) + facet_wrap(~outcome) +
+  labs(title = lbl("or_forest","title"), subtitle = lbl("or_forest","subtitle"),
        x = "Odds ratio (1.0 = no difference)", y = NULL, colour = NULL,
-       caption = paste("Single-predictor logistic models, course and cohort fixed effects.", src)) +
-  theme_dhsc_slide(base = 15) + theme(legend.position = "top")
+       caption = wrapcap(paste("Single-predictor logistic models, course and cohort fixed effects.", src))) +
+  theme_dhsc_slide(base = 15) + capt_theme + theme(legend.position = "top")
 save_slide(p3, file.path(out, "slide_or_forest.png"))
 
-# --- slide 4: survivorship ------------------------------------------
+# --- slide 4: survivorship -----------------------------------------
 surv <- rd("tbl_survivorship.csv") |>
-  mutate(spec = factor(spec, levels = c("All students", "Reached year 2", "Year 2 + financial confidence")),
-         predictor = factor(predictor, levels = pred_levels))
+  mutate(spec = factor(spec, levels = c("All students", "Reached year 2", "Year 2 + financial confidence")), predictor = factor(predictor, levels = pred_levels))
 p4 <- ggplot(surv, aes(OR, predictor, colour = spec)) +
   geom_vline(xintercept = 1, linetype = "dashed", colour = grey) +
   geom_errorbarh(aes(xmin = lo, xmax = hi), height = .2, linewidth = .45, position = position_dodge(width = .6)) +
-  geom_point(size = 2.8, position = position_dodge(width = .6)) +
-  scale_x_continuous(breaks = seq(0.8, 1.5, 0.1)) +
-  scale_colour_manual(values = c("All students" = grey, "Reached year 2" = dcol("af_orange", "#F46A25"), "Year 2 + financial confidence" = dcol("dhsc_blue", "#0063BE"))) +
-  labs(title = "Knowing about the grant beforehand only helps in the first year",
-       subtitle = "Odds of leaving before finishing: all students, then only those who reach year 2, then adjusted for financial confidence.\nAwareness (top) is protective overall but null once students reach year 2.",
+  geom_point(size = 2.8, position = position_dodge(width = .6)) + scale_x_continuous(breaks = seq(0.8, 1.5, 0.1)) +
+  scale_colour_manual(values = c("All students" = grey, "Reached year 2" = orange, "Year 2 + financial confidence" = dcol("dhsc_blue", "#0063BE"))) +
+  labs(title = lbl("survivorship","title"), subtitle = lbl("survivorship","subtitle"),
        x = "Odds ratio (1.0 = no difference)", y = NULL, colour = NULL,
-       caption = paste("Logistic models, course and cohort fixed effects.", src)) +
-  theme_dhsc_slide(base = 15) + theme(legend.position = "top")
+       caption = wrapcap(paste("Logistic models, course and cohort fixed effects.", src))) +
+  theme_dhsc_slide(base = 15) + capt_theme + theme(legend.position = "top")
 save_slide(p4, file.path(out, "slide_survivorship.png"))
 
-# --- slide 5: group comparisons -------------------------------------
-gr <- rd("tbl_group_rates.csv")
-overall <- gr |> filter(comparison == "Overall") |> pull(leave_rate)
+# --- slide 5: group comparisons ------------------------------------
+gr <- rd("tbl_group_rates.csv"); overall <- gr |> filter(comparison == "Overall") |> pull(leave_rate)
+comp_lv <- c("Aware of grant beforehand", "Has children", "Funding critical to course", "Financial confidence")
+grp_lv  <- c("Yes", "No", "Low (1-2)", "Mid (3)", "High (4-5)")
 gr2 <- gr |> filter(comparison != "Overall") |>
   mutate(group = recode(group, "TRUE" = "Yes", "FALSE" = "No"),
-         group = factor(group, levels = c("Yes", "No", "Low (1-2)", "Mid (3)", "High (4-5)")),
-         comparison = factor(comparison, levels = c("Aware of grant beforehand", "Has children", "Funding critical to course", "Financial confidence")))
+         group = factor(group, levels = grp_lv), comparison = factor(comparison, levels = comp_lv))
+lab_line  <- tibble(comparison = factor(comp_lv[1], levels = comp_lv), group = factor("No", levels = grp_lv))
+conf_note <- tibble(comparison = factor("Financial confidence", levels = comp_lv), group = factor("Mid (3)", levels = grp_lv))
 p5 <- ggplot(gr2, aes(leave_rate, group, fill = comparison)) +
-  geom_vline(xintercept = overall, linetype = "dashed", colour = grey) +
-  geom_col(width = .62, show.legend = FALSE) +
+  geom_vline(xintercept = overall, linetype = "dashed", colour = grey) + geom_col(width = .62, show.legend = FALSE) +
   geom_text(aes(label = sprintf("%.0f%%", leave_rate)), hjust = -0.25, size = 4, colour = ink) +
+  geom_text(data = lab_line, aes(x = overall + 0.6, y = group), label = sprintf("Overall average, %.0f%%", overall), hjust = 0, vjust = -1.6, size = 3.6, colour = grey, inherit.aes = FALSE) +
+  geom_label(data = conf_note, aes(x = 27, y = group), inherit.aes = FALSE, hjust = 0, vjust = 0.5,
+             label = "Asked only of continuing (year 2+) students,\na smaller, lower-risk group, so not\ncomparable to the 33% line above",
+             fill = dcol("gridgrey", "#E6E6E6"), colour = grey, label.size = 0, size = 3.0, lineheight = 0.95) +
   facet_grid(comparison ~ ., scales = "free_y", space = "free_y", switch = "y") +
   scale_x_continuous(limits = c(0, 46), breaks = seq(0, 40, 10), labels = \(z) paste0(z, "%")) +
-  scale_fill_manual(values = c(teal, dcol("af_orange", "#F46A25"), dcol("af_blue", "#12436D"), dcol("af_purple", "#A285D1"))) +
-  labs(title = "Some groups leave more than others, but the gaps are small",
-       subtitle = sprintf("Share of each group who left before finishing. Dashed line is the %.0f%% overall average.", overall),
-       x = "Share who left before finishing", y = NULL,
-       caption = src) +
-  theme_dhsc_slide(base = 15) +
+  scale_fill_manual(values = c(teal, orange, dcol("af_blue", "#12436D"), dcol("af_purple", "#A285D1"))) +
+  labs(title = lbl("groups","title"), subtitle = lbl("groups","subtitle"),
+       x = "Share who left before finishing", y = NULL, caption = wrapcap(src)) +
+  theme_dhsc_slide(base = 15) + capt_theme +
   theme(strip.placement = "outside", strip.text.y.left = element_text(angle = 0, hjust = 1, face = "bold"), panel.grid.major.y = element_blank())
 save_slide(p5, file.path(out, "slide_groups.png"))
 
-# --- slide 6: exit breakdown ----------------------------------------
-ex <- rd("tbl_exits.csv") |>
-  mutate(label = recode(outcome_cautious,
-                        active = "Still in progress",
-                        no_entry_observed = "First year never surveyed",
-                        dropped_out = "Dropped out",
-                        completed = "Completed",
-                        censored = "Would finish beyond the data"),
-         judgeable = ifelse(outcome_cautious %in% c("completed", "dropped_out"), "Can classify", "Cannot classify")) |>
-  arrange(share)
-ex$label <- factor(ex$label, levels = ex$label)
-y_ne <- which(levels(ex$label) == "First year never surveyed")   # bar to annotate
+# --- slide 6: exit breakdown ---------------------------------------
+ex <- rd("tbl_exits.csv") |> filter(outcome_cautious != "censored") |> # Censored bucket - noise, remove
+  mutate(label = recode(outcome_cautious, active = "Still in progress", no_entry_observed = "First year never surveyed",
+                        dropped_out = "Dropped out", completed = "Completed", censored = "Would finish beyond the data"),
+         judgeable = ifelse(outcome_cautious %in% c("completed", "dropped_out"), "Can classify", "Cannot classify")) |> arrange(share)
+ex$label <- factor(ex$label, levels = ex$label); y_ne <- which(levels(ex$label) == "First year never surveyed")
 p6 <- ggplot(ex, aes(share, label, fill = judgeable)) +
-  geom_col(width = .68) +
-  geom_text(aes(label = sprintf("%.0f%%", share)), hjust = -0.2, size = 4.2, colour = ink) +
-  annotate("text", x = 51, y = y_ne, hjust = 1, vjust = 0.5, size = 3.5, colour = grey, lineheight = 0.95,
+  geom_col(width = .68) + geom_text(aes(label = sprintf("%.0f%%", share)), hjust = -0.2, size = 4.2, colour = ink) +
+  annotate("text", x = 50, y = y_ne, hjust = 1, vjust = 0.5, size = 3.4, colour = grey, lineheight = 0.95,
            label = "Mostly the 2020 intake: the survey\nwasn't at full scale yet, so their\nfirst year was never recorded") +
-  annotate("curve", x = 33, xend = 24, y = y_ne, yend = y_ne, curvature = 0,
-           colour = grey, linewidth = .5, arrow = grid::arrow(length = grid::unit(2.4, "mm"))) +
+  annotate("curve", x = 24, xend = 33, y = y_ne, yend = y_ne, curvature = -0.25, colour = grey, linewidth = .45, arrow = grid::arrow(length = grid::unit(2.2, "mm"), ends = "first")) +
   scale_x_continuous(limits = c(0, 52), breaks = seq(0, 50, 10), labels = \(z) paste0(z, "%")) +
   scale_fill_manual(values = c("Can classify" = teal, "Cannot classify" = grey)) +
-  labs(title = "We can only see the full journey for about a third of students",
-       subtitle = "Share of all 290,947 LSF claimants in each course-outcome category, 2020 to 2026.",
-       x = "Share of all claimants", y = NULL, fill = NULL,
-       caption = paste("Course-length-anchored classification. Leaving analysis (n = 222,174) uses only students whose first year was observed,",
-                       "effectively the 2021-onwards intakes.", src)) +
-  theme_dhsc_slide(base = 15) + theme(legend.position = "top", panel.grid.major.y = element_blank(), plot.caption = element_text(lineheight = 1.15))
+  labs(title = lbl("exits","title"), subtitle = lbl("exits","subtitle"), x = "Share of all claimants", y = NULL, fill = NULL,
+       caption = wrapcap(paste("Course-length-anchored classification. Leaving analysis (n = 222,174) uses only students whose first year was observed, effectively the 2021-onwards intakes.", src))) +
+  theme_dhsc_slide(base = 15) + capt_theme + theme(legend.position = "top", panel.grid.major.y = element_blank())
 save_slide(p6, file.path(out, "slide_exits.png"))
+
+# --- slide 7: intention --------------------------------------------
+intent <- rd("tbl_dynamics_intention.csv") |>
+  mutate(grp = ifelse(considered_leaving, "Said they might leave", "Did not"), grp = factor(grp, levels = c("Did not", "Said they might leave")))
+p7 <- ggplot(intent, aes(left_next_pct, grp, fill = considered_leaving)) +
+  geom_col(width = .55, show.legend = FALSE) + geom_text(aes(label = sprintf("%.0f%%", left_next_pct)), hjust = -0.25, size = 5.5, colour = ink) +
+  scale_fill_manual(values = c(`FALSE` = teal, `TRUE` = orange)) + scale_x_continuous(limits = c(0, 30), breaks = seq(0, 30, 10), labels = \(z) paste0(z, "%")) +
+  labs(title = lbl("intention","title"), subtitle = lbl("intention","subtitle"),
+       x = "Share no longer claiming the following year", y = NULL,
+       caption = wrapcap(paste("Counted only where the student had course left and a full next year of data existed.", src))) +
+  theme_dhsc_slide(base = 15) + capt_theme + theme(panel.grid.major.y = element_blank())
+save_slide(p7, file.path(out, "slide_intention.png"))
+
+# --- slide 8: retention funnel -------------------------------------
+ret <- rd("tbl_retention_funnel.csv") |> mutate(grp = paste0(length_years, "-year courses"))
+p8 <- ggplot(ret, aes(study_year, survival_pct, colour = grp, group = grp)) +
+  geom_line(linewidth = 1.1) + geom_point(size = 3.4) +
+  geom_text(data = filter(ret, length_years == 3), aes(label = sprintf("%.0f%%", survival_pct)), vjust = -1.2, size = 4.2, show.legend = FALSE) +
+  geom_text(data = filter(ret, length_years == 4), aes(label = sprintf("%.0f%%", survival_pct)), vjust = 2.0, size = 4.2, show.legend = FALSE) +
+  scale_x_continuous(breaks = 1:4, labels = paste("Year", 1:4), expand = expansion(add = c(.15, .35))) +
+  scale_y_continuous(limits = c(0, 105), breaks = seq(0, 100, 20), labels = \(z) paste0(z, "%")) +
+  scale_colour_manual(values = c("3-year courses" = teal, "4-year courses" = orange)) +
+  labs(title = lbl("retention","title"), subtitle = lbl("retention","subtitle"),
+       x = "Year of study", y = "Share of starters still enrolled", colour = NULL,
+       caption = wrapcap(paste("Course length derived from the data. Only cohorts old enough to be observed to their final year are included (3-year: 2021-2023 starts; 4-year: 2021-2022). 2020 pilot excluded.", src))) +
+  theme_dhsc_slide(base = 15) + capt_theme + theme(legend.position = "top", panel.grid.major.x = element_blank())
+save_slide(p8, file.path(out, "slide_retention.png"))
+
+# --- slide 9: retention by largest courses -------------------------
+rc <- rd("tbl_retention_by_course.csv")
+ord <- rc |> distinct(course, starters) |> arrange(desc(starters)) |> pull(course)
+rc <- rc |> mutate(course = factor(course, levels = ord))
+p9 <- ggplot(rc, aes(study_year, survival_pct)) +
+  geom_line(colour = teal, linewidth = 1) + geom_point(colour = teal, size = 2.4) +
+  geom_text(aes(label = sprintf("%.0f%%", survival_pct)), vjust = -0.8, size = 3, colour = ink) +
+  facet_wrap(~course, ncol = 4) +
+  scale_x_continuous(breaks = 1:4, labels = paste0("Y", 1:4)) +
+  scale_y_continuous(limits = c(0, 115), breaks = c(0, 50, 100), labels = \(z) paste0(z, "%")) +
+  labs(title = lbl("retention_courses","title"), subtitle = lbl("retention_courses","subtitle"),
+       x = "Year of study", y = "Share of starters still enrolled",
+       caption = wrapcap(paste("Observed proportions, not modelled. Only cohorts observed to their final year are included. 2020 pilot excluded.", src))) +
+  theme_dhsc_slide(base = 13) + capt_theme + theme(strip.text = element_text(size = 10), panel.grid.major.x = element_blank())
+save_slide(p9, file.path(out, "slide_retention_courses.png"))
 
 progress("done. slides written to ", out)
