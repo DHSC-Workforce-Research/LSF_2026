@@ -46,7 +46,7 @@ p0 <- ggplot(qz, aes(year, measure, fill = block)) +
   geom_tile(width = .92, height = .72, colour = "white", linewidth = 1.2) +
   scale_x_continuous(breaks = 1:4, labels = paste("Year", 1:4), position = "top", limits = c(0.5, 4.5), expand = c(0, 0)) +
   scale_fill_manual(values = setNames(c(teal, orange, dcol("af_blue", "#12436D")), blocks_lv)) +
-  labs(title = "When the survey asks each question, and why it matters for the analysis",
+  labs(title = "Key measures start too late to catch first-year leavers",
        subtitle = "The questionnaire changes after Year 1. Anything measured only from Year 2 (financial confidence, considered leaving) can\nonly be analysed on students who reached Year 2, so any model using it drops everyone who left in the first year.",
        x = NULL, y = NULL, fill = NULL,
        caption = wrapcap("Year 4 applies to 4-year courses only, and final-year answers cannot be checked against a later drop. Source: LSF questionnaire structure.")) +
@@ -65,15 +65,84 @@ p1 <- ggplot(dec, aes(decile, leave_rate)) +
   annotate("text", x = 0.6, y = base + 2.2, hjust = 0, label = sprintf("Overall average, %.0f%%", base), colour = grey, size = 4.2) +
   scale_fill_manual(values = c(`FALSE` = teal, `TRUE` = orange)) +
   scale_x_continuous(breaks = 1:10, labels = c("Lowest\npredicted\nrisk", 2:9, "Highest\npredicted\nrisk"), expand = expansion(add = .6)) +
-  scale_y_continuous(limits = c(0, 62), breaks = seq(0, 50, 10), labels = \(z) paste0(z, "%")) +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20), labels = \(z) paste0(z, "%")) +
   labs(title = lbl("auc","title"), subtitle = lbl("auc","subtitle"),
        x = "Students ranked by the model's predicted risk of leaving (lowest to highest)", y = "Share who left before finishing",
        caption = wrapcap(paste("Logistic model of the five entry funding items.", src))) +
   theme_dhsc_slide(base = 15) + capt_theme + theme(panel.grid.major.x = element_blank(), plot.margin = margin(16, 22, 12, 12))
 box_txt <- lbl("auc","box")
-if (nzchar(box_txt)) p1 <- p1 + annotate("label", x = 0.55, y = 58, hjust = 0, vjust = 1, label = sprintf(box_txt, a, 100 * a),
+box_txt <- gsub("{auc}",    sprintf("%.2f", a),       box_txt, fixed = TRUE)
+box_txt <- gsub("{aucpct}", sprintf("%.0f", 100 * a), box_txt, fixed = TRUE)
+if (nzchar(box_txt)) p1 <- p1 + annotate("label", x = 0.55, y = 96, hjust = 0, vjust = 1, label = box_txt,
                                          fill = dcol("gridgrey", "#E6E6E6"), colour = ink, label.size = 0, size = 4.1, lineheight = 1.03)
 save_slide(p1, file.path(out, "slide_auc.png"))
+
+# --- slide 1b: model performance as a clean confusion table --------
+cf <- rd("tbl_confusion.csv")
+Lv <- round(100 * cf$base_rate)                       # leave per 100 = flagged per 100 (prevalence matched)
+TP <- round(cf$sensitivity * Lv); FN <- Lv - TP; FP <- FN; TN <- 100 - TP - FN - FP
+sens <- TP / Lv; spec <- TN / (TN + FP); prec <- TP / (TP + FP); acc <- (TP + TN) / 100
+naive <- max(Lv, 100 - Lv)
+head_fill <- dcol("dhsc_teal", "#01A188"); tint_ok <- "#D9ECE9"; tint_bad <- "#F7DAD4"; tint_tot <- "#EFEFEF"
+
+# confusion matrix (rows = actual, columns = predicted), laid out as a branded table
+cx <- c(1.9, 4.5, 6.4, 8.3); cw <- c(2.9, 1.85, 1.85, 1.85); ry <- 8.4 - (0:3) * 1.28
+mkcell <- function(ci, rj, txt, fill, tcol, face, sz)
+  tibble(x = cx[ci], y = ry[rj], w = cw[ci], txt = txt, fill = fill, tcol = tcol, face = face, sz = sz)
+cm <- dplyr::bind_rows(
+  mkcell(1,1,"", head_fill,"white","bold",4.4), mkcell(2,1,"Predicted\nto leave", head_fill,"white","bold",4.2),
+  mkcell(3,1,"Predicted\nto stay", head_fill,"white","bold",4.2), mkcell(4,1,"Total", head_fill,"white","bold",4.2),
+  mkcell(1,2,"Actually left", head_fill,"white","bold",4.0), mkcell(1,3,"Actually stayed", head_fill,"white","bold",4.0),
+  mkcell(1,4,"Total", head_fill,"white","bold",4.0),
+  mkcell(2,2,sprintf("%d",TP), tint_ok, ink,"bold",6.4), mkcell(3,2,sprintf("%d",FN), tint_bad, ink,"bold",6.4),
+  mkcell(4,2,sprintf("%d",Lv), tint_tot, ink,"plain",5.2),
+  mkcell(2,3,sprintf("%d",FP), tint_bad, ink,"bold",6.4), mkcell(3,3,sprintf("%d",TN), tint_ok, ink,"bold",6.4),
+  mkcell(4,3,sprintf("%d",100-Lv), tint_tot, ink,"plain",5.2),
+  mkcell(2,4,sprintf("%d",Lv), tint_tot, ink,"plain",5.2), mkcell(3,4,sprintf("%d",100-Lv), tint_tot, ink,"plain",5.2),
+  mkcell(4,4,"100", tint_tot, ink,"bold",5.2))
+
+# metrics panel (right)
+mx_l <- 10.4; mx_r <- 18.8
+mrows <- tibble::tribble(
+  ~lab, ~val,
+  "Sensitivity (leavers caught)",         sprintf("%.0f%%", 100 * sens),
+  "Precision (flags that were correct)",  sprintf("%.0f%%", 100 * prec),
+  "Specificity (stayers cleared)",        sprintf("%.0f%%", 100 * spec),
+  "Model accuracy",                       sprintf("%.0f%%", 100 * acc),
+  "Accuracy of naive guess ('no-one leaves')",      sprintf("%.0f%%", naive),
+  "Type I errors (false alarms)",         sprintf("%d", FP),
+  "Type II errors (missed leavers)",      sprintf("%d", FN),
+  "AUC (0.50 = chance, 1.00 = perfect)",  sprintf("%.2f", cf$auc)) |>
+  mutate(y = seq(7.0, by = -0.82, length.out = 8))
+zeb <- mrows |> mutate(i = dplyr::row_number()) |> filter(i %% 2 == 1)
+
+p1b <- ggplot(cm, aes(x, y)) +
+  geom_tile(aes(width = w, height = 1.18, fill = fill), colour = "white", linewidth = 1.8) +
+  scale_fill_identity() +
+  geom_text(aes(label = txt, colour = tcol, fontface = face, size = sz), lineheight = .92) +
+  scale_colour_identity() + scale_size_identity() +
+  annotate("rect", xmin = mx_l - 0.4, xmax = mx_r + 0.4, ymin = 7.9, ymax = 8.65, fill = head_fill) +
+  annotate("text", x = mx_l - 0.1, y = 8.27, hjust = 0, colour = "white", fontface = "bold", size = 4.6,
+           label = "Model performance, per 100 students") +
+  geom_rect(data = zeb, aes(xmin = mx_l - 0.4, xmax = mx_r + 0.4, ymin = y - 0.41, ymax = y + 0.41),
+            fill = "#F4F4F4", inherit.aes = FALSE) +
+  geom_text(data = mrows, aes(x = mx_l - 0.1, y = y, label = lab), hjust = 0, size = 4.2, colour = ink, inherit.aes = FALSE) +
+  geom_text(data = mrows, aes(x = mx_r + 0.1, y = y, label = val), hjust = 1, size = 4.5, fontface = "bold", colour = ink, inherit.aes = FALSE) +
+  annotate("text", x = 0.5, y = 3.35, hjust = 0, vjust = 1, size = 3.6, colour = grey, lineheight = 1.2,
+           label = sprintf("Based on all %s students, of whom about %s actually left.\nShown per 100 for readability; the model flags as many as leave.",
+                           format(cf$n, big.mark = ","), format(round(cf$n * cf$base_rate), big.mark = ","))) +
+  scale_x_continuous(limits = c(0.3, 19.3), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0.6, 9.2), expand = c(0, 0)) +
+  labs(title = lbl("confusion", "title", "We can't accurately predict who leaves based on their survey responses."),
+       subtitle = lbl("confusion", "subtitle", "The model scores every student's risk of leaving, then flags the highest-risk, as many as the number who actually left. Cells are scaled\nto 100 students."),
+       caption = wrapcap(paste("Logistic model of the five entry funding items plus cohort, prevalence-matched threshold. Type I and Type II errors are equal because we flag as many students as leave.", src))) +
+  theme_void(base_size = 15) +
+  theme(plot.title = element_text(face = "bold", size = 22, colour = ink, margin = margin(b = 4)),
+        plot.subtitle = element_text(size = 15, colour = "grey30", margin = margin(b = 12)),
+        plot.caption = element_text(size = 11, colour = "grey45", hjust = 0),
+        plot.title.position = "plot", plot.caption.position = "plot",
+        plot.margin = margin(16, 20, 12, 18))
+save_slide(p1b, file.path(out, "slide_confusion.png"))
 
 # --- slide 2: factors ----------------------------------------------
 fac <- rd("tbl_factors.csv") |> mutate(direction = ifelse(OR >= 1, "More likely to leave", "Less likely to leave")) |> arrange(OR)
@@ -102,7 +171,12 @@ p3 <- ggplot(grid, aes(OR, predictor, colour = direction)) +
   labs(title = lbl("or_forest","title"), subtitle = lbl("or_forest","subtitle"),
        x = "Odds ratio (1.0 = no difference)", y = NULL, colour = NULL,
        caption = wrapcap(paste("Single-predictor logistic models, course and cohort fixed effects.", src))) +
-  theme_dhsc_slide(base = 15) + capt_theme + theme(legend.position = "top")
+  theme_dhsc_slide(base = 15) + capt_theme +
+  theme(legend.position = "top",
+        panel.spacing    = grid::unit(2.5, "lines"),
+        strip.background = element_rect(fill = "grey90", colour = NA),
+        strip.text       = element_text(face = "bold", size = 14, hjust = 0.5),
+        panel.border     = element_rect(fill = NA, colour = "grey85"))
 save_slide(p3, file.path(out, "slide_or_forest.png"))
 
 # --- slide 4: survivorship -----------------------------------------
