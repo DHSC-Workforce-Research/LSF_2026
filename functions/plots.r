@@ -21,31 +21,54 @@ add_net <- function(banded) {
 .strip_key <- function(x) sub("^.*___", "", x)
 
 # HEADLINE: % in one band per group (default Unconfident = ratings 1-2).
-# Sorted worst-first, faceted by demographic, dashed line at the survey average.
-#   band: "Unconfident", "Confident", or "Neutral"
+# Bars sorted worst-first, faceted by demographic. Dashed line = survey average.
+# Colour flags groups more than k SD from that average:
+#   DHSC teal  = clearly less worried (good side)
+#   grey       = within k SD (typical)
+#   GOV.UK red = clearly more worried
+#   band: "Unconfident", "Confident", or "Neutral"; k: SD threshold
 plot_confidence_bar <- function(banded, band = "Unconfident",
-                                title = NULL, ncol = 3, show_values = TRUE) {
+                                title = NULL, ncol = 3, k = 1, show_values = TRUE) {
   pct_col <- paste0(band, "_pct")
   d <- banded[!banded$is_total, ]
   d$value <- d[[pct_col]]
+
+  # survey average (n-weighted) and n-weighted SD of group rates
+  ref <- stats::weighted.mean(d$value, d$n)
+  s   <- sqrt(stats::weighted.mean((d$value - ref)^2, d$n))
+  z   <- if (s > 0) (d$value - ref) / s else rep(0, nrow(d))
+
+  # green is always the "good" side, whichever band is shown
+  higher_is_bad <- band %in% c("Unconfident", "Neutral")
+  d$status <- ifelse(abs(z) <= k, "Typical",
+              ifelse((z > 0) == higher_is_bad, "More worried than average",
+                                               "Less worried than average"))
+  d$status <- factor(d$status, levels = c("Less worried than average",
+                                          "Typical", "More worried than average"))
+
   d$key <- factor(paste(d$Demographic, d$Group, sep = "___"),
                   levels = paste(d$Demographic, d$Group, sep = "___")[order(d$value)])
 
-  ref  <- stats::weighted.mean(d$value, d$n)
-  fill <- switch(band, Unconfident = "#B2182B", Confident = "#2166AC", "#7F7F7F")
+  cols <- c("Less worried than average" = "#01A188",  # DHSC teal
+            "Typical"                   = "#B1B4B6",   # GOV.UK grey
+            "More worried than average" = "#D4351C")   # GOV.UK red
   opts <- switch(band, Unconfident = "1-2", Confident = "4-5", "3")
   if (is.null(title)) title <- sprintf("%% %s by group", tolower(band))
 
-  p <- ggplot2::ggplot(d, ggplot2::aes(x = value, y = key)) +
-    ggplot2::geom_col(fill = fill, width = 0.75) +
+  p <- ggplot2::ggplot(d, ggplot2::aes(x = value, y = key, fill = status)) +
+    ggplot2::geom_col(width = 0.75) +
     ggplot2::geom_vline(xintercept = ref, linetype = "dashed",
                         colour = "grey30", linewidth = 0.3) +
     ggplot2::scale_y_discrete(labels = .strip_key) +
+    ggplot2::scale_fill_manual(values = cols, drop = FALSE) +
     ggplot2::facet_wrap(~ Demographic, scales = "free_y", ncol = ncol) +
-    ggplot2::labs(title = title,
-                  subtitle = sprintf("Dashed line = survey average (%.0f%%)", ref),
-                  x = sprintf("%% %s (rated %s)", tolower(band), opts), y = NULL) +
-    theme_confidence()
+    ggplot2::labs(
+      title = title,
+      subtitle = sprintf("Dashed line = survey average (%.0f%%); colour = more than %g SD from it",
+                         ref, k),
+      x = sprintf("%% %s (rated %s)", tolower(band), opts), y = NULL, fill = NULL) +
+    theme_confidence() +
+    ggplot2::theme(legend.position = "top")
 
   if (show_values)
     p <- p + ggplot2::geom_text(ggplot2::aes(label = sprintf("%.0f", value)),
@@ -53,8 +76,7 @@ plot_confidence_bar <- function(banded, band = "Unconfident",
   p + ggplot2::expand_limits(x = max(d$value) * 1.08)
 }
 
-# OPTIONAL alternative: net-confidence ranking (kept for reference, not called
-# by default). Net = Confident% - Unconfident%.
+# OPTIONAL: net-confidence ranking (kept for reference, not called by default).
 plot_confidence_ranked <- function(banded, ncol = 3) {
   d <- add_net(banded[!banded$is_total, ])
   d$key <- factor(paste(d$Demographic, d$Group, sep = "___"),
@@ -64,7 +86,7 @@ plot_confidence_ranked <- function(banded, ncol = 3) {
     ggplot2::geom_col(width = 0.75) +
     ggplot2::geom_vline(xintercept = 0, colour = "grey40", linewidth = 0.3) +
     ggplot2::scale_y_discrete(labels = .strip_key) +
-    ggplot2::scale_fill_manual(values = c(pos = "#2166AC", neg = "#B2182B")) +
+    ggplot2::scale_fill_manual(values = c(pos = "#01A188", neg = "#D4351C")) +
     ggplot2::facet_wrap(~ Demographic, scales = "free_y", ncol = ncol) +
     ggplot2::labs(title = "Net financial confidence by group",
                   x = "Net confidence (pp)", y = NULL) +
