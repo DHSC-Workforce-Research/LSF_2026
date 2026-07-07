@@ -76,7 +76,7 @@ auc <- function(score, y) {
   r <- rank(score); n1 <- as.numeric(sum(y == 1)); n0 <- as.numeric(sum(y == 0))
   if (n1 == 0 || n0 == 0) return(NA_real_); (sum(r[y == 1]) - n1 * (n1 + 1) / 2) / (n1 * n0)
 }
-auc_rows <- list(); decile_tbl <- NULL
+auc_rows <- list(); decile_tbl <- NULL; confusion_tbl <- NULL
 for (oc in c("left_before_finish", "one_wave_only")) {
   d <- samp[, c(oc, "fund_availability", "grant_influence", "crit_course", "crit_uni", "grant_helps_stay", "entry_year")]
   d[[oc]] <- as.integer(as.logical(d[[oc]])); d <- d[stats::complete.cases(d), ]
@@ -86,12 +86,30 @@ for (oc in c("left_before_finish", "one_wave_only")) {
   auc_rows[[oc]] <- tibble(outcome = oc, n = nrow(d), base_rate = round(mean(d[[oc]]), 3),
                            auc_survey = round(auc(predict(m_svy, type = "response"), d[[oc]]), 3),
                            auc_plus_year = round(auc(predict(m_yr, type = "response"), d[[oc]]), 3))
-  if (oc == "left_before_finish")
-    decile_tbl <- tibble(decile = dplyr::ntile(predict(m_yr, type = "response"), 10), y = d[[oc]]) |>
+  if (oc == "left_before_finish") {
+    p_hat <- predict(m_yr, type = "response"); y <- d[[oc]]
+    decile_tbl <- tibble(decile = dplyr::ntile(p_hat, 10), y = y) |>
       group_by(decile) |> summarise(n = n(), leave_rate = round(100 * mean(y), 1), .groups = "drop")
+    # confusion matrix at a prevalence-matched threshold: flag exactly as many
+    # students as actually leave (the model's highest-scoring npos), so the count
+    # predicted to leave equals the count who do. Type I = false alarm (flagged,
+    # stayed); Type II = missed leaver (not flagged, left). Same scores as the AUC.
+    npos <- sum(y == 1L); N <- length(y)
+    flag <- rank(-p_hat, ties.method = "first") <= npos
+    tp <- sum(flag & y == 1L); fp <- sum(flag & y == 0L)
+    fn <- sum(!flag & y == 1L); tn <- sum(!flag & y == 0L)
+    confusion_tbl <- tibble(
+      outcome = oc, n = N, base_rate = round(mean(y), 3), n_flagged = npos,
+      tp = tp, fp = fp, fn = fn, tn = tn,
+      sensitivity = round(tp / (tp + fn), 3), specificity = round(tn / (tn + fp), 3),
+      precision   = round(tp / (tp + fp), 3), accuracy = round((tp + tn) / N, 3),
+      naive_accuracy = round(max(mean(y), 1 - mean(y)), 3),
+      random_tp = round(npos * mean(y)), auc = round(auc(p_hat, y), 3))
+  }
 }
 write_csv(bind_rows(auc_rows), file.path(out, "tbl_auc_summary.csv"))
 write_csv(decile_tbl, file.path(out, "tbl_auc_decile.csv"))
+write_csv(confusion_tbl, file.path(out, "tbl_confusion.csv"))
 
 progress("(4) factors ...")
 factors_def <- tibble::tribble(
