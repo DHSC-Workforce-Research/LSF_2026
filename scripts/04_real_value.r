@@ -1,0 +1,81 @@
+# ===========================================================================
+# scripts/04_real_value.R   (thin runner; all logic lives in functions/real_value.r)
+#
+# Tests whether the REAL VALUE of the LSF (cost-of-living + inflation adjusted)
+# predicts leaving, LAD vs TTWA geography, and the parent/carer interaction.
+# ASSOCIATIONAL, consistent with the main analysis.
+#
+# Inputs:
+#   * the three CSVs from build_all.R, copied into REF_DIR
+#   * a student-year data frame that carries at least:
+#       college (HEI), year (wave), course, and the leaving OUTCOME below
+#     (the long tidied panel joined to the derived outcome; see note at foot)
+# ===========================================================================
+
+purrr::walk(list.files("functions", full.names = TRUE), source)
+suppressMessages({
+  library(dplyr); library(readr); library(tidyr); library(stringr)
+  library(broom); library(ggplot2)
+})
+
+# ---- CONFIG ----------------------------------------------------------------
+REF_DIR  <- "reference"                              # where the 3 CSVs live
+SAMPLE   <- readRDS(file.path(derived_dir(), "lsf_analysis_sample.rds")) |> as.data.frame()
+OUTCOME  <- "left_before_finish"                       # 0/1 leaving outcome
+FE       <- c("entry_year", "course")                  # fixed effects
+# provider/year columns are set at the top of functions/real_value.r (college/year)
+# ---------------------------------------------------------------------------
+
+ref    <- read_csv(file.path(REF_DIR, "provider_costofliving.csv"), show_col_types = FALSE)
+cpih   <- read_csv(file.path(REF_DIR, "cpih_index.csv"),           show_col_types = FALSE)
+awards <- read_csv(file.path(REF_DIR, "lsf_awards.csv"),           show_col_types = FALSE)
+
+need <- c(RV_PROVIDER, RV_YEAR, OUTCOME)
+miss <- setdiff(need, names(SAMPLE))
+if (length(miss))
+  stop("SAMPLE is missing: ", paste(miss, collapse = ", "),
+       "\nJoin `college` + `year` from the long panel onto the analysis sample by UniqueID.")
+
+samp <- build_real_value(SAMPLE, ref, awards, cpih, base_year = 2020)
+have_parent <- any(samp$has_parent == 1L, na.rm = TRUE)
+
+measures <- c(real_value_cpih      = "Inflation-only (CPIH)",
+              real_value_rent      = "Rent-adjusted (LAD)",
+              real_value_hp        = "House-price-adjusted (LAD)",
+              real_value_rent_ttwa = "Rent-adjusted (TTWA)",
+              real_value_hp_ttwa   = "House-price-adjusted (TTWA)")
+
+# fit one logistic model; OR is per 1 SD of the real-value measure -----------
+fit_one <- function(m, interact = FALSE) {
+  d <- samp |> filter(!is.na(.data[[m]]), !is.na(.data[[OUTCOME]]))
+  d$rv <- as.numeric(scale(d[[m]]))
+  rhs <- if (interact) "rv * has_parent" else "rv"
+  fe  <- paste(sprintf("factor(%s)", FE), collapse = " + ")
+  fit <- glm(as.formula(sprintf("%s ~ %s + %s", OUTCOME, rhs, fe)), data = d, family = binomial)
+  broom::tidy(fit, conf.int = TRUE, exponentiate = TRUE) |>
+    filter(term %in% c("rv", "rv:has_parent")) |>
+    transmute(measure = measures[[m]], spec = if (interact) "with parent interaction" else "main",
+              term = recode(term, rv = "real value (per SD)", `rv:has_parent` = "x parent/carer"),
+              OR = estimate, lo = conf.low, hi = conf.high, p = p.value)
+}
+
+specs <- expand_grid(m = names(measures), interact = c(FALSE, have_parent)) |> distinct()
+res   <- purrr::pmap_dfr(specs, function(m, interact) fit_one(m, interact))
+
+cat("\n=== Real value -> leaving (odds ratios, 95% CI) ===\n")
+print(as.data.frame(res |> mutate(across(c(OR, lo, hi), ~round(.x, 3)))), row.names = FALSE)
+write_csv(res, file.path(outputs_dir(), "real_value_odds.csv"))
+
+# ---- DHSC forest plot (widescreen slide) -----------------------------------
+p <- ggplot(filter(res, term == "real value (per SD)"),
+            aes(x = OR, y = reorder(measure, OR))) +
+  geom_vline(xintercept = 1, colour = "grey40", linewidth = 0.3) +
+  geom_pointrange(aes(xmin = lo, xmax = hi), colour = "#00A499") +   # DHSC teal
+  labs(title = "Does the real value of the LSF predict leaving?",
+       subtitle = "Odds ratio of leaving per 1 SD of real grant value. Associational; entry-year and course fixed effects.",
+       x = "Odds ratio of leaving (per SD)", y = NULL) +
+  theme_dhsc()
+save_dhsc(p, file.path(outputs_dir(), "real_value_slide.png"), width = 13.33, height = 7.5)
+
+cat("\nWritten: real_value_odds.csv, real_value_slide.png ->", outputs_dir(), "\n")
+if (!have_parent) cat("NOTE: parent flag not set; interaction skipped (see functions/real_value.r RV_PARENT).\n")
