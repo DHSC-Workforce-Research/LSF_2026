@@ -52,6 +52,29 @@ hei <- read_csv(HEI_CSV, show_col_types = FALSE) |>
             lon = as.numeric(LONGITUDE), lat = as.numeric(LATITUDE)) |>
   filter(!is.na(postcode), postcode != "")
 
+# ---- 1b. Postcode corrections (documented overrides for known-bad register entries) ----
+# hei_providers.csv (JISC Learning Providers Plus) has stale/incorrect postcodes for
+# a handful of providers, which silently drops them at the geocoding step below with
+# no error. Verified against postcodes.io + each institution's public campus address,
+# 2026-07-09:
+#   - Birmingham City University (UKPRN 10007140, register postcode B42 2SU):
+#     postcode TERMINATED 2018-11 (postcodes.io confirms). Reverse-geocoding the
+#     register's own stored lat/lon (-1.897282, 52.517286) resolves to B42 2GX,
+#     same site, Birmingham LAD (E08000025).
+#   - University of Northampton (UKPRN 10007138, register postcode NN2 5PH):
+#     postcode does not exist (404) - looks like a transposed-digit typo in the
+#     source register. NN1 5PH is Waterside Campus, the university's documented
+#     current address, and resolves correctly.
+postcode_fixes <- tibble::tribble(
+  ~ukprn,      ~postcode_fixed,
+  10007140,    "B42 2GX",   # Birmingham City University
+  10007138,    "NN1 5PH"    # University of Northampton
+)
+hei <- hei |>
+  left_join(postcode_fixes, by = "ukprn") |>
+  mutate(postcode = coalesce(postcode_fixed, postcode)) |>
+  select(-postcode_fixed)
+
 # ---- 2. Geocode postcodes -> LAD/MSOA/LSOA/region (cached) ------------------
 GEO_CACHE <- file.path(data_dir, "hei_geocoded.csv")
 if (file.exists(GEO_CACHE)) {

@@ -11,15 +11,57 @@
 #   real_value_hp    = grant / local house-price cost-index   (space + time via UK HPI)
 # ===========================================================================
 
-# ---- COLUMN MAP (set to the long tidied df's columns) -----------------------
-RV_PROVIDER <- "college"       # HEI/provider name field in the LSF long df
-RV_YEAR     <- "year"          # survey wave year on each student-year row
+# ---- COLUMN MAP (set to the analysis sample's columns) ----------------------
+RV_PROVIDER <- "college"       # HEI/provider name field in the LSF analysis sample
+RV_YEAR     <- "entry_year"    # SAMPLE is one row per student (from trajectories);
+                                # "year" here is the cohort's entry year, which is
+                                # also the anchor for base_year = 2020 below and the
+                                # entry_year fixed effect used in 04_real_value.r.
 # No direct parent/carer field in the survey. Proxy = received Parental Support,
 # which requires a dependent child <15 to be eligible. Derive it from
 # `grants_applied` once its coding is known, e.g.:
 #   samp$has_parent <- as.integer(stringr::str_detect(samp$grants_applied, regex("parent", TRUE)))
 # then set RV_PARENT <- "has_parent". Leave NA to disable the interaction.
 RV_PARENT   <- NA_character_
+
+# Known name variants in the LSF survey that don't string-match the reference
+# register's names for the SAME institution (renames / legal-name differences,
+# or the register using an older name). Verified against
+# sort(unique(ref$provider)) directly, 2026-07-09.
+PROVIDER_ALIASES <- c(
+  "UNIVERSITY OF TEESSIDE"                   = "Teesside University",
+  "UNIVERSITY OF LANCASHIRE"                 = "University of Central Lancashire",
+  "UNIVERSITY OF THE WEST OF ENGLAND"        = "University of the West of England, Bristol",
+  "NORTHUMBRIA UNIVERSITY"                   = "University of Northumbria at Newcastle",
+  "CITY UNIVERSITY LONDON"                   = "The City University",
+  "KEELE UNIVERSITY"                         = "University of Keele",
+  "UNIVERSITY OF STAFFORDSHIRE"              = "Staffordshire University",
+  "UNIVERSITY OF GREATER MANCHESTER"         = "The University of Bolton",
+  "BUCKS NEW UNIVERSITY"                     = "Buckinghamshire New University",
+  "LEEDS BECKETT UNIVERSITY"                 = "Leeds Metropolitan University",
+  "UNIVERSITY OF SUFFOLK"                    = "University Campus Suffolk Ltd",
+  "CITY ST GEORGE'S - UNIVERSITY OF LONDON"  = "The City University",
+  "ST GEORGE'S - UNIVERSITY OF LONDON"       = "St George's Hospital Medical School",
+  "BRUNEL UNIVERSITY LONDON"                 = "Brunel University",
+  "UNIVERSITY OF ROEHAMPTON"                 = "Roehampton University",
+  "NEWMAN UNIVERSITY - BIRMINGHAM"           = "Newman University College",
+  "UNIVERSITY OF NEWCASTLE"                  = "University of Newcastle Upon Tyne",
+  "SOLENT UNIVERSITY"                        = "Southampton Solent University",
+  "ST MARY'S UNIVERSITY"                     = "St Mary's University College, Twickenham",
+  "LEEDS TRINITY UNIVERSITY"                 = "Leeds Trinity University College",
+  "QUEEN MARY UNIVERSITY OF LONDON"          = "Queen Mary and Westfield College, University of London",
+  "OPEN UNIVERSITY - MILTON KEYNES"          = "Open University(The)",
+  "OPEN UNIVERSITY - MIDDLESEX"              = "Open University(The)",
+  "OPEN UNIVERSITY - UWE"                    = "Open University(The)",
+  "OPEN UNIVERSITY - OXFORD"                 = "Open University(The)",
+  "OPEN UNIVERSITY - TORBAY AND SOUTH DEVON" = "Open University(The)",
+  "ROYAL HOLLOWAY UNIVERSITY OF LONDON"      = "Royal Holloway College and Bedford New College"
+)
+# NB "CITY ST GEORGE'S" (the 2025 merger of City, University of London + St
+# George's, University of London) is aliased to the City campus (Islington).
+# St George's medical/nursing students are actually based at Tooting, a
+# DIFFERENT LAD - this is an approximation. Fine for CPIH-only real value;
+# imprecise for the LAD/TTWA rent/house-price measures (1,626 students affected).
 # ---------------------------------------------------------------------------
 
 # normalise a provider name for matching. Deletes apostrophes (so King's = Kings),
@@ -40,13 +82,16 @@ match_providers <- function(sample, ref, provider_col = RV_PROVIDER) {
     dplyr::distinct(provider, lad_code, region) |>
     dplyr::mutate(.key = rv_norm(provider)) |>
     dplyr::distinct(.key, .keep_all = TRUE)
-  s <- sample |> dplyr::mutate(.key = rv_norm(.data[[provider_col]]))
+  s <- sample |>
+    dplyr::mutate(.resolved = dplyr::coalesce(
+                    unname(PROVIDER_ALIASES[.data[[provider_col]]]), .data[[provider_col]]),
+                  .key = rv_norm(.resolved))
   out <- dplyr::left_join(s, dplyr::select(ref_u, .key, lad_code, region), by = ".key")
   miss <- out |> dplyr::filter(is.na(lad_code)) |> dplyr::distinct(.data[[provider_col]])
   if (nrow(miss) > 0)
     message("match_providers: ", nrow(miss), " unmatched providers (add to a crosswalk):\n",
             paste(" -", miss[[1]], collapse = "\n"))
-  dplyr::select(out, -.key)
+  dplyr::select(out, -.key, -.resolved)
 }
 
 # attach nominal grant, cost indices, CPIH and the three real-value measures
