@@ -15,7 +15,7 @@
 purrr::walk(list.files("functions", full.names = TRUE), source)
 suppressMessages({
   library(dplyr); library(readr); library(tidyr); library(stringr)
-  library(broom); library(ggplot2)
+  library(ggplot2)
 })
 
 # ---- CONFIG ----------------------------------------------------------------
@@ -48,20 +48,36 @@ measures <- c(real_value_cpih      = "Inflation-only (CPIH)",
               real_value_rent_ttwa = "Rent-adjusted (TTWA)",
               real_value_hp_ttwa   = "House-price-adjusted (TTWA)")
 
+# extract Wald odds ratios DIRECTLY from the fitted model - deliberately NOT
+# using broom::tidy(conf.int=TRUE), which defaults to profile-likelihood CIs
+# (MASS::confint.glm re-fits the model many times per coefficient). With
+# ~75 factor(course)+factor(entry_year) dummy parameters that is minutes-to-
+# much-longer with ZERO console output, which is what caused every earlier
+# "it just hangs" run. confint.default() is base stats: computed directly
+# from the already-fitted model's standard errors, no re-fitting, no
+# profiling, no ambiguity about which method gets dispatched.
+extract_or <- function(fit, terms) {
+  co <- summary(fit)$coefficients
+  ci <- confint.default(fit)
+  keep <- intersect(terms, rownames(co))
+  data.frame(
+    term      = keep,
+    estimate  = exp(co[keep, "Estimate"]),
+    conf.low  = exp(ci[keep, 1]),
+    conf.high = exp(ci[keep, 2]),
+    p.value   = co[keep, "Pr(>|z|)"],
+    row.names = NULL
+  )
+}
+
 # fit one logistic model; OR is per 1 SD of the real-value measure -----------
-# NB: conf.method = "Wald" avoids broom's default profile-likelihood CIs,
-# which re-fit the model many times per coefficient (MASS::confint.glm) and
-# are prohibitively slow with ~75 factor(course)+factor(entry_year) dummies.
-# Wald CIs are derived directly from the fitted model's SEs (no re-fitting)
-# and are indistinguishable from profile CIs at n=222k.
 fit_one <- function(m, interact = FALSE) {
   d <- samp |> filter(!is.na(.data[[m]]), !is.na(.data[[OUTCOME]]))
   d$rv <- as.numeric(scale(d[[m]]))
   rhs <- if (interact) "rv * has_parent" else "rv"
   fe  <- paste(sprintf("factor(%s)", FE), collapse = " + ")
   fit <- glm(as.formula(sprintf("%s ~ %s + %s", OUTCOME, rhs, fe)), data = d, family = binomial)
-  broom::tidy(fit, conf.int = TRUE, exponentiate = TRUE, conf.method = "Wald") |>
-    filter(term %in% c("rv", "rv:has_parent")) |>
+  extract_or(fit, c("rv", "rv:has_parent")) |>
     transmute(measure = measures[[m]], spec = if (interact) "with parent interaction" else "main",
               term = recode(term, rv = "real value (per SD)", `rv:has_parent` = "x parent/carer"),
               OR = estimate, lo = conf.low, hi = conf.high, p = p.value)
@@ -101,6 +117,8 @@ p <- ggplot(filter(res, term == "real value (per SD)"),
        x = "Odds ratio of leaving (per SD)", y = NULL) +
   theme_dhsc()
 save_dhsc(p, file.path(outputs_dir(), "real_value_slide.png"), width = 13.33, height = 7.5)
+
+saveRDS(samp, file.path(derived_dir(), "lsf_real_value_sample.rds"))
 
 cat("\nWritten: real_value_odds.csv, real_value_slide.png ->", outputs_dir(), "\n")
 if (!have_parent) cat("NOTE: parent flag not set; interaction skipped (see functions/real_value.r RV_PARENT).\n")
