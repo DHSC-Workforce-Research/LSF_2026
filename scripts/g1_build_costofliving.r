@@ -69,8 +69,9 @@ postcode_fixes <- tibble::tribble(
   ~ukprn,      ~postcode_fixed,
   10007140,    "B42 2GX",   # Birmingham City University
   10007138,    "NN1 5PH"    # University of Northampton
-)
+) |> mutate(ukprn = as.numeric(ukprn))   # force type match against hei$ukprn (belt and braces)
 hei <- hei |>
+  mutate(ukprn = as.numeric(ukprn)) |>
   left_join(postcode_fixes, by = "ukprn") |>
   mutate(postcode = coalesce(postcode_fixed, postcode)) |>
   select(-postcode_fixed)
@@ -100,6 +101,14 @@ if (file.exists(GEO_CACHE)) {
 hei <- hei |> left_join(distinct(geo, postcode, .keep_all = TRUE), by = "postcode")
 message("HEIs: ", nrow(hei), " | geocoded: ", sum(!is.na(hei$lad_code)),
         " | England: ", sum(hei$country == "England", na.rm = TRUE))
+
+# loud reporting for any HEI that failed to geocode (would otherwise silently
+# drop out of `ref` later with no trace - same pattern as match_providers()'s
+# unmatched-provider reporting in functions/real_value.r)
+failed_geo <- hei |> filter(is.na(lad_code)) |> distinct(provider, postcode)
+if (nrow(failed_geo) > 0)
+  message("WARNING: ", nrow(failed_geo), " HEI(s) failed to geocode (will be dropped):\n",
+          paste(" -", failed_geo$provider, "(", failed_geo$postcode, ")", collapse = "\n"))
 
 # ---- helper: collapse a code x month price series to code x year -----------
 by_year <- function(df, code, date, val, newname) {
@@ -158,8 +167,21 @@ comp <- comp |> transmute(lad_code = LAD22CD, ttwa_code = TTWA11CD, ttwa_name = 
 # TTWA cost per year = OA-weighted mean of member-LAD rent / house price
 lad_costs <- rent_lad |> select(lad_code, year, rent_all) |>
   full_join(select(hp_lad, lad_code, year, house_price), by = c("lad_code", "year"))
+# NB many-to-many is INTENTIONAL here: `comp` has multiple rows per lad_code when a
+# LAD's constituent Output Areas span more than one TTWA, and `lad_costs` has one row
+# per lad_code PER YEAR. Joining on lad_code alone deliberately cross-multiplies every
+# TTWA a LAD touches by every year - required so the group_by(ttwa_code, year) below
+# can compute each TTWA's population-weighted average cost per year across all its
+# member LADs. `relationship = "many-to-many"` only silences the warning once we've
+# PROVEN it's this benign LAD x TTWA x year expansion and not accidental duplicate
+# rows on either side (which would double-weight a LAD and silently corrupt the
+# weighted mean without showing up as a coverage/missingness problem):
+stopifnot("comp has duplicate (lad_code, ttwa_code) rows" =
+            !anyDuplicated(comp[c("lad_code", "ttwa_code")]))
+stopifnot("lad_costs has duplicate (lad_code, year) rows" =
+            !anyDuplicated(lad_costs[c("lad_code", "year")]))
 ttwa_cost <- comp |>
-  inner_join(lad_costs, by = "lad_code") |>
+  inner_join(lad_costs, by = "lad_code", relationship = "many-to-many") |>
   group_by(ttwa_code, year) |>
   summarise(ttwa_rent  = weighted.mean(rent_all,    n_oa, na.rm = TRUE),
             ttwa_hp    = weighted.mean(house_price, n_oa, na.rm = TRUE), .groups = "drop")
