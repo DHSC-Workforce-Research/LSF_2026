@@ -121,4 +121,5 @@ save_dhsc(p, file.path(outputs_dir(), "real_value_slide.png"), width = 13.33, he
 saveRDS(samp, file.path(derived_dir(), "lsf_real_value_sample.rds"))
 
 cat("\nWritten: real_value_odds.csv, real_value_slide.png ->", outputs_dir(), "\n")
-if (!have_parent) cat("NOTE: parent flag not set; interaction skipped (see functions/real_value.r RV_PARENT).\n")
+if (!have_parent) cat("NOTE: parent flag not set; interaction skipped (see functions/real_value.r RV_PARENT).\n")#
+message("Real value coverage: ", round(100*mean(!is.na(samp$real_value_rent_ttwa)),1), "%")
