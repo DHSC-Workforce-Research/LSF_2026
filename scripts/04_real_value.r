@@ -26,9 +26,9 @@ FE       <- c("entry_year", "course")                  # fixed effects
 # provider/year columns are set at the top of functions/real_value.r (college/year)
 # ---------------------------------------------------------------------------
 
-ref    <- read_csv(file.path(REF_DIR, "provider_costofliving.csv"), show_col_types = FALSE)
-cpih   <- read_csv(file.path(REF_DIR, "cpih_index.csv"),           show_col_types = FALSE)
-awards <- read_csv(file.path(REF_DIR, "lsf_awards.csv"),           show_col_types = FALSE)
+ref    <- read_csv(file.path(REF_DIR, "provider_costofliving.csv"), show_col_types = FALSE, progress = FALSE)
+cpih   <- read_csv(file.path(REF_DIR, "cpih_index.csv"),           show_col_types = FALSE, progress = FALSE)
+awards <- read_csv(file.path(REF_DIR, "lsf_awards.csv"),           show_col_types = FALSE, progress = FALSE)
 
 need <- c(RV_PROVIDER, RV_YEAR, OUTCOME)
 miss <- setdiff(need, names(SAMPLE))
@@ -36,7 +36,10 @@ if (length(miss))
   stop("SAMPLE is missing: ", paste(miss, collapse = ", "),
        "\nJoin `college` + `year` from the long panel onto the analysis sample by UniqueID.")
 
+cat("Building real-value measures...\n")
+t0 <- Sys.time()
 samp <- build_real_value(SAMPLE, ref, awards, cpih, base_year = 2020)
+cat(sprintf("  done in %.1fs\n", as.numeric(Sys.time() - t0, units = "secs")))
 have_parent <- any(samp$has_parent == 1L, na.rm = TRUE)
 
 measures <- c(real_value_cpih      = "Inflation-only (CPIH)",
@@ -46,13 +49,18 @@ measures <- c(real_value_cpih      = "Inflation-only (CPIH)",
               real_value_hp_ttwa   = "House-price-adjusted (TTWA)")
 
 # fit one logistic model; OR is per 1 SD of the real-value measure -----------
+# NB: conf.method = "Wald" avoids broom's default profile-likelihood CIs,
+# which re-fit the model many times per coefficient (MASS::confint.glm) and
+# are prohibitively slow with ~75 factor(course)+factor(entry_year) dummies.
+# Wald CIs are derived directly from the fitted model's SEs (no re-fitting)
+# and are indistinguishable from profile CIs at n=222k.
 fit_one <- function(m, interact = FALSE) {
   d <- samp |> filter(!is.na(.data[[m]]), !is.na(.data[[OUTCOME]]))
   d$rv <- as.numeric(scale(d[[m]]))
   rhs <- if (interact) "rv * has_parent" else "rv"
   fe  <- paste(sprintf("factor(%s)", FE), collapse = " + ")
   fit <- glm(as.formula(sprintf("%s ~ %s + %s", OUTCOME, rhs, fe)), data = d, family = binomial)
-  broom::tidy(fit, conf.int = TRUE, exponentiate = TRUE) |>
+  broom::tidy(fit, conf.int = TRUE, exponentiate = TRUE, conf.method = "Wald") |>
     filter(term %in% c("rv", "rv:has_parent")) |>
     transmute(measure = measures[[m]], spec = if (interact) "with parent interaction" else "main",
               term = recode(term, rv = "real value (per SD)", `rv:has_parent` = "x parent/carer"),
@@ -60,7 +68,24 @@ fit_one <- function(m, interact = FALSE) {
 }
 
 specs <- expand_grid(m = names(measures), interact = c(FALSE, have_parent)) |> distinct()
-res   <- purrr::pmap_dfr(specs, function(m, interact) fit_one(m, interact))
+n_specs <- nrow(specs)
+
+cat(sprintf("Fitting %d model(s)...\n", n_specs))
+res_list <- vector("list", n_specs)
+t_start <- Sys.time()
+for (i in seq_len(n_specs)) {
+  ti <- Sys.time()
+  res_list[[i]] <- fit_one(specs$m[i], specs$interact[i])
+  elapsed_i   <- as.numeric(Sys.time() - ti,      units = "secs")
+  elapsed_tot <- as.numeric(Sys.time() - t_start, units = "secs")
+  avg <- elapsed_tot / i
+  eta <- avg * (n_specs - i)
+  cat(sprintf("  [%d/%d] %-28s (%s) done in %.1fs  |  elapsed %.1fs  |  ETA %.1fs\n",
+              i, n_specs, measures[[specs$m[i]]],
+              if (specs$interact[i]) "with interaction" else "main",
+              elapsed_i, elapsed_tot, eta))
+}
+res <- dplyr::bind_rows(res_list)
 
 cat("\n=== Real value -> leaving (odds ratios, 95% CI) ===\n")
 print(as.data.frame(res |> mutate(across(c(OR, lo, hi), ~round(.x, 3)))), row.names = FALSE)
