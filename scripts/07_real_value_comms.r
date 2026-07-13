@@ -89,24 +89,14 @@ theme_comms <- function(base = 14) {
     )
 }
 
-# Zoom y to data range (not forced from 0).
-# ONS service manual (axes & gridlines): line charts may start above zero;
-# leave a gap (~1/4-1/3 of chart) between axis start and first data when cropped.
-# Analysis Function charts guidance: OK to break numerical y on LINE charts;
-# never on bar charts. When broken: clear broken-axis symbol ON the y-axis,
-# y-axis + break thicker/darker than gridlines, x-axis like gridlines,
-# break from a rounded value, mention break in description.
-# Refs:
-#   https://service-manual.ons.gov.uk/data-visualisation/guidance/axes-and-gridlines
-#   https://analysisfunction.civilservice.gov.uk/policy-store/data-visualisation-charts/
-#   https://digitalblog.ons.gov.uk/2016/06/27/does-the-axis-have-to-start-at-zero-part-1-line-charts/
+# Zoom y to data range (not forced from 0) so modest gradients are visible.
+# No // axis-break symbol (removed: looked poor on these slides). Caption notes
+# when the scale does not start at zero.
 y_zoom_limits <- function(ymin, ymax, pad = 0.28) {
   span <- max(ymax - ymin, 0.01)
-  # pad below data so first points sit above the floor (ONS gap guidance)
   lo <- max(0, ymin - pad * span)
   hi <- min(1, ymax + 0.12 * span)
   if (lo < 0.02) lo <- 0
-  # snap floor to a sensible rounded % when broken (AF: rounded break)
   if (lo > 0) {
     step <- if (span < 0.05) 0.01 else if (span < 0.15) 0.02 else 0.05
     lo <- max(0, floor(lo / step) * step)
@@ -114,45 +104,14 @@ y_zoom_limits <- function(ymin, ymax, pad = 0.28) {
   c(lo, hi)
 }
 
-# Broken-axis symbol ON the y-axis (two diagonal ticks), AF / ONS style.
-# Not floating in the plot area.
-add_axis_break <- function(p, y_lo, y_hi, x_min, x_max) {
-  if (is.na(y_lo) || y_lo <= 0.005) return(p)
-
-  dx <- 0.018 * (x_max - x_min)
-  dy <- 0.028 * (y_hi - y_lo)
-  # sit on the left axis line, just above the axis floor
-  y0 <- y_lo + 1.15 * dy
-  x0 <- x_min  # y-axis at left of data
-
-  p +
-    # small white gap so the y-axis looks interrupted at the break
-    annotate("rect",
-             xmin = x0 - 2.2 * dx, xmax = x0 + 0.35 * dx,
-             ymin = y0 - 1.9 * dy, ymax = y0 + 1.9 * dy,
-             fill = "white", colour = NA) +
-    # two parallel diagonal segments = standard y-axis break mark
-    annotate("segment",
-             x = x0 - 1.1 * dx, xend = x0 + 1.1 * dx,
-             y = y0 - 0.35 * dy, yend = y0 + 0.95 * dy,
-             colour = ink, linewidth = 1.15, lineend = "square") +
-    annotate("segment",
-             x = x0 - 1.1 * dx, xend = x0 + 1.1 * dx,
-             y = y0 - 1.15 * dy, yend = y0 + 0.15 * dy,
-             colour = ink, linewidth = 1.15, lineend = "square") +
-    # AF: y-axis + break darker/thicker; x-axis like gridlines
-    theme(
-      axis.line.y = element_line(colour = ink, linewidth = 0.7),
-      axis.line.x = element_line(colour = "#B1B4B6", linewidth = 0.4),
-      axis.ticks.y = element_line(colour = ink, linewidth = 0.5),
-      panel.grid.major.y = element_line(colour = "#E6E6E6", linewidth = 0.35),
-      panel.grid.major.x = element_line(colour = "#E6E6E6", linewidth = 0.35)
-    ) +
-    labs(caption = paste0(
-      wrapcap(src), "\n",
-      "Note: y-axis does not start at 0 (broken-axis mark on the vertical scale). ",
-      "Line-chart zoom follows ONS / Analysis Function guidance."
-    ))
+# Caption only (no visual // mark)
+caption_y_zoom <- function(y_lo) {
+  base <- wrapcap(src)
+  if (!is.na(y_lo) && y_lo > 0.005) {
+    paste0(base, "\nNote: y-axis does not start at 0% (scale zoomed to show the gradient).")
+  } else {
+    base
+  }
 }
 
 progress("07: load + build real LSF ...")
@@ -485,7 +444,7 @@ curve_plot <- function(curves, title, subtitle, y_lab, colours = NULL,
       x = paste0("Real LSF value (£, ", PRIMARY_LBL, ")"),
       y = wrap_title(y_lab, w = 28),
       colour = NULL, fill = NULL,
-      caption = wrapcap(src)
+      caption = caption_y_zoom(yl[1])
     ) +
     theme_comms(base = 14) +
     theme(
@@ -509,9 +468,6 @@ curve_plot <- function(curves, title, subtitle, y_lab, colours = NULL,
                fill = "#F4F4F4", colour = ink, size = 3.3, label.size = 0,
                lineheight = 1.05)
   }
-
-  # ONS-style // when axis floor is not zero
-  p <- add_axis_break(p, yl[1], yl[2], x_min, x_max)
   p
 }
 
@@ -611,8 +567,6 @@ split_curves <- bind_rows(
     mutate(panel = "Influenced enrolment or helps stay")
 )
 yl6 <- y_zoom_limits(min(split_curves$lo, na.rm = TRUE), max(split_curves$hi, na.rm = TRUE))
-x6_min <- min(split_curves$rv_gbp, na.rm = TRUE)
-x6_max <- max(split_curves$rv_gbp, na.rm = TRUE)
 p6 <- ggplot(split_curves, aes(rv_gbp, p)) +
   geom_ribbon(aes(ymin = lo, ymax = hi), fill = teal, alpha = 0.15) +
   geom_line(colour = teal, linewidth = 1.15) +
@@ -634,11 +588,10 @@ p6 <- ggplot(split_curves, aes(rv_gbp, p)) +
     ),
     x = paste0("Real LSF value (£, ", PRIMARY_LBL, ")"),
     y = "Predicted probability",
-    caption = wrapcap(src)
+    caption = caption_y_zoom(yl6[1])
   ) +
   theme_comms(base = 14) +
   theme(strip.text = element_text(face = "bold", size = 12, lineheight = 1.05))
-p6 <- add_axis_break(p6, yl6[1], yl6[2], x6_min, x6_max)
 save_slide(p6, file.path(out, "slide_rv_salient_split.png"))
 
 # 7 summary stat slide (table image)
