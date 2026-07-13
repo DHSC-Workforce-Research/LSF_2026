@@ -64,7 +64,63 @@ src    <- paste0(
   "Source: NHS LSF panel 2020-2026, DHSC analysis. Real LSF = frozen nominal x CPIH x local rent (TTWA). ",
   "Predicted probabilities for a typical student profile. Associational, not causal."
 )
-wrapcap <- function(x, w = 128) stringr::str_wrap(x, w)
+# Widescreen 16:9: keep titles/subtitles inside the frame (Lee feedback 2026-07-13)
+wrap_title <- function(x, w = 52) stringr::str_wrap(x, width = w)
+wrap_sub   <- function(x, w = 95) stringr::str_wrap(x, width = w)
+wrapcap    <- function(x, w = 118) stringr::str_wrap(x, width = w)
+
+# Theme bits shared by all comms slides: multi-line title/subtitle + breathing room
+theme_comms <- function(base = 14) {
+  theme_dhsc_slide(base = base) +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(
+        size = base * 1.35, face = "bold", lineheight = 1.05,
+        margin = ggplot2::margin(b = 6)),
+      plot.subtitle = ggplot2::element_text(
+        size = base * 0.92, colour = "grey30", lineheight = 1.12,
+        margin = ggplot2::margin(b = 10)),
+      plot.caption = ggplot2::element_text(
+        size = base * 0.72, colour = "grey45", hjust = 0, lineheight = 1.1,
+        margin = ggplot2::margin(t = 8)),
+      plot.margin = ggplot2::margin(14, 20, 12, 16),
+      legend.position = "top",
+      legend.box = "vertical",
+      legend.margin = ggplot2::margin(b = 4)
+    )
+}
+
+# Zoom y to data range (not forced from 0) + ONS-style // break mark when floor > 0
+y_zoom_limits <- function(ymin, ymax, pad = 0.12) {
+  span <- max(ymax - ymin, 0.01)
+  lo <- max(0, ymin - pad * span)
+  hi <- min(1, ymax + pad * span)
+  # if the zoom floor is clearly above 0, keep it (effect visible)
+  # if almost at 0 already, start at 0
+  if (lo < 0.02) lo <- 0
+  c(lo, hi)
+}
+
+# Two short diagonal ticks like ONS axis break, just above the panel bottom-left
+add_axis_break <- function(p, y_lo, y_hi, x_min, x_max) {
+  if (is.na(y_lo) || y_lo <= 0.005) return(p)  # already from ~0; no break needed
+  # place // in the bottom-left corner of the panel, in data coords
+  x0 <- x_min - 0.02 * (x_max - x_min)
+  dy <- 0.035 * (y_hi - y_lo)
+  y0 <- y_lo + 0.5 * dy
+  p +
+    # white wipe under the break so it reads as axis interruption
+    annotate("rect",
+             xmin = x0 - 0.04 * (x_max - x_min), xmax = x_min,
+             ymin = y0 - 1.4 * dy, ymax = y0 + 1.4 * dy,
+             fill = "white", colour = NA) +
+    annotate("text", x = x0 + 0.01 * (x_max - x_min), y = y0,
+             label = "//", angle = 0, size = 5.5, colour = grey,
+             fontface = "bold", hjust = 0.5, vjust = 0.5) +
+    labs(caption = paste0(
+      wrapcap(src), "\n",
+      "Note: vertical axis does not start at 0% (break marked //). Scale chosen to show the gradient."
+    ))
+}
 
 progress("07: load + build real LSF ...")
 SAMPLE <- as.data.frame(readRDS(file.path(derived_dir(), "lsf_analysis_sample.rds")))
@@ -353,7 +409,7 @@ write_csv(prev, file.path(out, "tbl_rv_outcome_prevalence.csv"))
 
 # ---- plot helper ----------------------------------------------------------
 curve_plot <- function(curves, title, subtitle, y_lab, colours = NULL,
-                       annotate_pp = NULL) {
+                       annotate_pp = NULL, zoom_y = TRUE) {
   curves <- curves |>
     mutate(spec = factor(spec, levels = unique(spec)))
   if (is.null(colours)) {
@@ -362,41 +418,73 @@ curve_plot <- function(curves, title, subtitle, y_lab, colours = NULL,
     names(cols) <- labs_s
   } else cols <- colours
 
+  y_data_lo <- min(curves$lo, na.rm = TRUE)
+  y_data_hi <- max(curves$hi, na.rm = TRUE)
+  if (isTRUE(zoom_y)) {
+    yl <- y_zoom_limits(y_data_lo, y_data_hi)
+  } else {
+    yl <- c(0, min(1, y_data_hi * 1.08 + 0.02))
+  }
+  x_min <- min(curves$rv_gbp, na.rm = TRUE)
+  x_max <- max(curves$rv_gbp, na.rm = TRUE)
+
+  # callout sits inside the zoomed panel (top-right of data range)
+  callout_y <- yl[1] + 0.92 * (yl[2] - yl[1])
+
   p <- ggplot(curves, aes(rv_gbp, p, colour = spec, fill = spec)) +
-    geom_ribbon(aes(ymin = lo, ymax = hi), alpha = 0.12, colour = NA) +
-    geom_line(linewidth = 1.15) +
+    geom_ribbon(aes(ymin = lo, ymax = hi), alpha = 0.14, colour = NA) +
+    geom_line(linewidth = 1.2) +
     scale_colour_manual(values = cols) +
     scale_fill_manual(values = cols) +
-    scale_y_continuous(labels = function(z) paste0(round(100 * z), "%"),
-                       limits = c(0, NA)) +
-    scale_x_continuous(labels = function(z) format(z, big.mark = ",", scientific = FALSE)) +
+    scale_y_continuous(
+      labels = function(z) paste0(round(100 * z), "%"),
+      limits = yl,
+      expand = expansion(mult = c(0.02, 0.04)),
+      breaks = scales_pretty_pct(yl)
+    ) +
+    scale_x_continuous(
+      labels = function(z) format(round(z), big.mark = ",", scientific = FALSE),
+      expand = expansion(mult = c(0.02, 0.04))
+    ) +
     labs(
-      title = title, subtitle = subtitle,
+      title = wrap_title(title),
+      subtitle = wrap_sub(subtitle),
       x = paste0("Real LSF value, GBP (", PRIMARY_LBL, ")"),
-      y = y_lab, colour = NULL, fill = NULL,
+      y = wrap_title(y_lab, w = 28),
+      colour = NULL, fill = NULL,
       caption = wrapcap(src)
     ) +
-    theme_dhsc_slide(base = 14) +
+    theme_comms(base = 14) +
     theme(
-      legend.position = "top",
-      panel.grid.major.x = element_line(colour = "#E6E6E6", linewidth = 0.4)
+      panel.grid.major.x = element_line(colour = "#E6E6E6", linewidth = 0.4),
+      axis.title.y = element_text(margin = ggplot2::margin(r = 8))
     )
 
   if (!is.null(annotate_pp) && nrow(annotate_pp) > 0) {
-    # callout top-right: pp rise if GBP 1000 less under fullest spec
-    a <- annotate_pp |> slice_tail(n = 1)
+    a <- annotate_pp |> dplyr::slice_tail(n = 1)
+    # short wrap-friendly callout
     txt <- sprintf(
-      "If real LSF is GBP 1,000 lower\n(around the mean):\npredicted probability\nrises by about %.1f pp\n(%s)",
-      a$pp_increase_if_1k_less, a$spec
+      "GBP 1,000 lower real LSF\n(around the mean):\nabout %+.1f pp on\npredicted probability\n(%s)",
+      a$pp_increase_if_1k_less,
+      # shorten spec label for the box
+      sub("^S([0-9]).*", "S\\1", a$spec)
     )
     p <- p +
       annotate("label",
-               x = max(curves$rv_gbp), y = max(curves$hi, na.rm = TRUE),
+               x = x_max, y = callout_y,
                hjust = 1, vjust = 1, label = txt,
-               fill = "#F4F4F4", colour = ink, size = 3.6, label.size = 0,
+               fill = "#F4F4F4", colour = ink, size = 3.3, label.size = 0,
                lineheight = 1.05)
   }
+
+  # ONS-style // when axis floor is not zero
+  p <- add_axis_break(p, yl[1], yl[2], x_min, x_max)
   p
+}
+
+# nice percent breaks inside a zoomed window (no extra package)
+scales_pretty_pct <- function(yl, n = 5) {
+  pretty(yl, n = n)
 }
 
 # ---- SLIDES ---------------------------------------------------------------
@@ -426,20 +514,20 @@ p2 <- ggplot(pp_leave_plot, aes(pp_increase_if_1k_less, spec, fill = spec)) +
   geom_col(width = 0.62, show.legend = FALSE) +
   geom_text(aes(label = lab), hjust = -0.1, size = 5, colour = ink, fontface = "bold") +
   scale_fill_manual(values = c(teal, blue, orange)[seq_len(nrow(pp_leave_plot))]) +
-  scale_x_continuous(limits = c(0, max(pp_leave_plot$pp_increase_if_1k_less) * 1.25),
+  scale_x_continuous(limits = c(0, max(pp_leave_plot$pp_increase_if_1k_less) * 1.35),
                      labels = function(z) paste0(z, " pp")) +
   labs(
-    title = "Does the leaving link survive controls?",
-    subtitle = paste0(
+    title = wrap_title("Does the leaving link survive controls?"),
+    subtitle = wrap_sub(paste0(
       "Rise in predicted leaving probability when real LSF is GBP 1,000 lower (around the mean). ",
       "Same typical-student profile as the curve slide. Larger bar = stronger association."
-    ),
+    )),
     x = "Percentage-point rise in predicted leaving probability",
     y = NULL,
     caption = wrapcap(src)
   ) +
-  theme_dhsc_slide(base = 15) +
-  theme(panel.grid.major.y = element_blank())
+  theme_comms(base = 15) +
+  theme(panel.grid.major.y = element_blank(), legend.position = "none")
 save_slide(p2, file.path(out, "slide_rv_leave_controls.png"))
 
 # 3 unconfident
@@ -489,21 +577,35 @@ split_curves <- bind_rows(
   enrol_res$curves |> filter(spec == "S1: + course + entry year") |>
     mutate(panel = "Influenced enrolment or helps stay")
 )
+yl6 <- y_zoom_limits(min(split_curves$lo, na.rm = TRUE), max(split_curves$hi, na.rm = TRUE))
+x6_min <- min(split_curves$rv_gbp, na.rm = TRUE)
+x6_max <- max(split_curves$rv_gbp, na.rm = TRUE)
 p6 <- ggplot(split_curves, aes(rv_gbp, p)) +
   geom_ribbon(aes(ymin = lo, ymax = hi), fill = teal, alpha = 0.15) +
   geom_line(colour = teal, linewidth = 1.15) +
   facet_wrap(~panel, nrow = 1) +
-  scale_y_continuous(labels = function(z) paste0(round(100 * z), "%")) +
-  scale_x_continuous(labels = function(z) format(z, big.mark = ",", scientific = FALSE)) +
+  scale_y_continuous(
+    labels = function(z) paste0(round(100 * z), "%"),
+    limits = yl6,
+    expand = expansion(mult = c(0.02, 0.04)),
+    breaks = scales_pretty_pct(yl6)
+  ) +
+  scale_x_continuous(
+    labels = function(z) format(round(z), big.mark = ",", scientific = FALSE),
+    expand = expansion(mult = c(0.02, 0.04))
+  ) +
   labs(
-    title = "Which funding question tracks real LSF?",
-    subtitle = "S1 (course + entry year). Left: choice of what/where to study. Right: enrolment influence / helps stay.",
+    title = wrap_title("Which funding question tracks real LSF?"),
+    subtitle = wrap_sub(
+      "S1 (course + entry year). Left: choice of what/where to study. Right: enrolment influence / helps stay."
+    ),
     x = paste0("Real LSF value, GBP (", PRIMARY_LBL, ")"),
     y = "Predicted probability",
     caption = wrapcap(src)
   ) +
-  theme_dhsc_slide(base = 14) +
-  theme(strip.text = element_text(face = "bold", size = 13))
+  theme_comms(base = 14) +
+  theme(strip.text = element_text(face = "bold", size = 12, lineheight = 1.05))
+p6 <- add_axis_break(p6, yl6[1], yl6[2], x6_min, x6_max)
 save_slide(p6, file.path(out, "slide_rv_salient_split.png"))
 
 # 7 summary stat slide (table image)
@@ -540,11 +642,11 @@ sum_df <- bind_rows(
 
 p7 <- dhsc_table_plot(
   sum_df,
-  title = "Real LSF: probability impact at a glance",
-  subtitle = paste0(
+  title = wrap_title("Real LSF: probability impact at a glance", w = 48),
+  subtitle = wrap_sub(paste0(
     "Predicted probability for a typical student. Real LSF = ", PRIMARY_LBL, ". ",
     "pp = percentage-point change if real LSF is GBP 1,000 lower around the mean."
-  ),
+  )),
   caption = wrapcap(src),
   base_size = 14
 )
