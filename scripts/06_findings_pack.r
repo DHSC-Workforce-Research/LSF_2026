@@ -29,7 +29,7 @@
 #   B_panel_which_year_counts.csv
 #   B_panel_lags.csv
 #   B_panel_descriptives.csv
-#   findings_numbers.txt             ← plain English numbers to paste/email
+#   findings_numbers.txt             <- plain English numbers to paste/email
 #
 # Run from repo root (after 01 at least; 05 optional):
 #   source("scripts/06_findings_pack.r")
