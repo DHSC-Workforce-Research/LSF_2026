@@ -17,12 +17,11 @@ RV_YEAR     <- "entry_year"    # SAMPLE is one row per student (from trajectorie
                                 # "year" here is the cohort's entry year, which is
                                 # also the anchor for base_year = 2020 below and the
                                 # entry_year fixed effect used in 04_real_value.r.
-# No direct parent/carer field in the survey. Proxy = received Parental Support,
-# which requires a dependent child <15 to be eligible. Derive it from
-# `grants_applied` once its coding is known, e.g.:
-#   samp$has_parent <- as.integer(stringr::str_detect(samp$grants_applied, regex("parent", TRUE)))
-# then set RV_PARENT <- "has_parent". Leave NA to disable the interaction.
-RV_PARENT   <- NA_character_
+# Parent/carer proxy = received Parental Support (dependent child <15 to be
+# eligible). On the analysis sample this is the logical `parental` column built
+# in scripts/01_read_tidy.r from grants_applied. Leave NA to disable top-up and
+# the parent interaction in scripts/04.
+RV_PARENT   <- "parental"
 
 # Known name variants in the LSF survey that don't string-match the reference
 # register's names for the SAME institution (renames / legal-name differences,
@@ -55,7 +54,10 @@ PROVIDER_ALIASES <- c(
   "OPEN UNIVERSITY - UWE"                    = "Open University(The)",
   "OPEN UNIVERSITY - OXFORD"                 = "Open University(The)",
   "OPEN UNIVERSITY - TORBAY AND SOUTH DEVON" = "Open University(The)",
-  "ROYAL HOLLOWAY UNIVERSITY OF LONDON"      = "Royal Holloway College and Bedford New College"
+  "ROYAL HOLLOWAY UNIVERSITY OF LONDON"      = "Royal Holloway College and Bedford New College",
+  # unmatched on 2026-07 work-machine run (add when register names confirmed):
+  # HEALTH SCIENCES UNIVERSITY, BPP UNIVERSITY LTD, NEW COLLEGE DURHAM,
+  # COLCHESTER INSTITUTE, UNIVERSITY CENTRE SOMERSET, BIRMINGHAM METROPOLITAN COLLEGE
 )
 # NB "CITY ST GEORGE'S" (the 2025 merger of City, University of London + St
 # George's, University of London) is aliased to the City campus (Islington).
