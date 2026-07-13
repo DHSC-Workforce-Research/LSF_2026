@@ -249,11 +249,20 @@ ref <- ref |> mutate(
   # TTWA geography (functional market students disperse across)
   rent_factor_ttwa = pmin(1, anc$rent_ttwa / ttwa_rent),
   hp_factor_ttwa   = pmin(1, anc$hp_ttwa   / ttwa_hp),
-  real_value_cpih_gbp      = round(CORE_GRANT * infl_factor),
-  real_value_rent_gbp      = round(CORE_GRANT * rent_factor),
-  real_value_hp_gbp        = round(CORE_GRANT * hp_factor),
-  real_value_rent_ttwa_gbp = round(CORE_GRANT * rent_factor_ttwa),
-  real_value_hp_ttwa_gbp   = round(CORE_GRANT * hp_factor_ttwa))
+  # combined: CPIH x local housing (both channels; product already <= 1)
+  rent_cpih_factor      = infl_factor * rent_factor,
+  hp_cpih_factor        = infl_factor * hp_factor,
+  rent_ttwa_cpih_factor = infl_factor * rent_factor_ttwa,
+  hp_ttwa_cpih_factor   = infl_factor * hp_factor_ttwa,
+  real_value_cpih_gbp           = round(CORE_GRANT * infl_factor),
+  real_value_rent_gbp           = round(CORE_GRANT * rent_factor),
+  real_value_hp_gbp             = round(CORE_GRANT * hp_factor),
+  real_value_rent_ttwa_gbp      = round(CORE_GRANT * rent_factor_ttwa),
+  real_value_hp_ttwa_gbp        = round(CORE_GRANT * hp_factor_ttwa),
+  real_value_rent_cpih_gbp      = round(CORE_GRANT * rent_cpih_factor),
+  real_value_hp_cpih_gbp        = round(CORE_GRANT * hp_cpih_factor),
+  real_value_rent_ttwa_cpih_gbp = round(CORE_GRANT * rent_ttwa_cpih_factor),
+  real_value_hp_ttwa_cpih_gbp   = round(CORE_GRANT * hp_ttwa_cpih_factor))
 write_csv(ref, file.path(DIR, "provider_costofliving.csv"))
 
 # ---- 8. VALIDATION ---------------------------------------------------------

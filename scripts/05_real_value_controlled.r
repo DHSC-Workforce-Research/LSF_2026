@@ -20,8 +20,8 @@ set.seed(1)
 
 # ---- CONFIG ----------------------------------------------------------------
 REF_DIR     <- "reference"
-PRIMARY     <- "real_value_rent_ttwa"
-PRIMARY_LBL <- "Rent-adjusted (TTWA)"
+PRIMARY     <- "real_value_rent_ttwa_cpih"   # headline: inflation AND local rent
+PRIMARY_LBL <- "CPIH x rent (TTWA)"
 FE          <- "course + entry_year"
 
 OUTCOMES <- tibble::tibble(
@@ -31,11 +31,13 @@ OUTCOMES <- tibble::tibble(
             "left_2y_plus_early", "considered_leaving")
 )
 MEASURES <- c(
-  real_value_cpih      = "Inflation-only (CPIH)",
-  real_value_rent      = "Rent-adjusted (LAD)",
-  real_value_hp        = "House-price-adjusted (LAD)",
-  real_value_rent_ttwa = "Rent-adjusted (TTWA)",
-  real_value_hp_ttwa   = "House-price-adjusted (TTWA)"
+  real_value_cpih           = "Inflation-only (CPIH)",
+  real_value_rent_ttwa      = "Rent only (TTWA)",
+  real_value_rent_ttwa_cpih = "CPIH x rent (TTWA) [headline]",
+  real_value_rent_cpih      = "CPIH x rent (LAD)",
+  real_value_hp_ttwa_cpih   = "CPIH x house price (TTWA)",
+  real_value_rent           = "Rent only (LAD)",
+  real_value_hp_ttwa        = "House price only (TTWA)"
 )
 SURVEY_VARS <- c("fund_availability", "grant_influence", "crit_course",
                  "crit_uni", "grant_helps_stay")
