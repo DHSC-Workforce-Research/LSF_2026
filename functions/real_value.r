@@ -27,11 +27,12 @@ RV_YEAR     <- "entry_year"    # SAMPLE is one row per student (from trajectorie
                                 # "year" here is the cohort's entry year, which is
                                 # also the anchor for base_year = 2020 below and the
                                 # entry_year fixed effect used in 04_real_value.r.
-# Parent/carer proxy = received Parental Support (dependent child <15 to be
-# eligible). On the analysis sample this is the logical `parental` column built
-# in scripts/01_read_tidy.r from grants_applied. Leave NA to disable top-up and
-# the parent interaction in scripts/04.
-RV_PARENT   <- "parental"
+# Component flags on the analysis sample (from grants_applied in 01_read_tidy):
+#   parental   -> + parental_support (£2,000)
+#   specialist -> + specialist_subject (£1,000)
+# Training grant (£5,000) is universal. Leave NA to disable that top-up.
+RV_PARENT     <- "parental"
+RV_SPECIALIST <- "specialist"
 
 # Known name variants in the LSF survey that don't string-match the reference
 # register's names for the SAME institution (renames / legal-name differences,
@@ -106,28 +107,44 @@ match_providers <- function(sample, ref, provider_col = RV_PROVIDER) {
   dplyr::select(out, -.key, -.resolved)
 }
 
-# attach nominal grant, cost indices, CPIH and the three real-value measures
+# attach nominal grant, cost indices, CPIH and real-value measures
+# Nominal package (England LSF schedule, non-means-tested core components):
+#   training_grant £5,000 (all) + parental_support £2,000 + specialist_subject £1,000
+# as flagged on the sample. Max face value = £8,000 if both top-ups.
 build_real_value <- function(sample, ref, awards, cpih, base_year = 2020,
                              provider_col = RV_PROVIDER, year_col = RV_YEAR,
-                             parent_col = RV_PARENT) {
-  training <- awards$amount[awards$component == "training_grant"][1]
-  parental <- awards$amount[awards$component == "parental_support"][1]
+                             parent_col = RV_PARENT,
+                             specialist_col = RV_SPECIALIST) {
+  training   <- awards$amount[awards$component == "training_grant"][1]
+  parental   <- awards$amount[awards$component == "parental_support"][1]
+  specialist <- awards$amount[awards$component == "specialist_subject"][1]
+  if (is.na(training))   stop("awards missing training_grant")
+  if (is.na(parental))   parental <- 0
+  if (is.na(specialist)) specialist <- 0
 
-  # the haircut factors (all <=1) come pre-computed in the reference (build_all.R)
+  # the haircut factors (all <=1) come pre-computed in the reference (g1)
   # LAD = campus location; TTWA = functional market students disperse across
   costs <- ref |>
     dplyr::distinct(lad_code, year, infl_factor,
                     rent_factor, hp_factor, rent_factor_ttwa, hp_factor_ttwa)
 
-  has_parent_available <- !is.na(parent_col) && parent_col %in% names(sample)
+  flag01 <- function(df, col) {
+    if (is.na(col) || !col %in% names(df)) return(rep(0L, nrow(df)))
+    as.integer(df[[col]] %in% c(1, TRUE, "Yes", "yes", "TRUE"))
+  }
+
+  has_parent_available     <- !is.na(parent_col) && parent_col %in% names(sample)
+  has_specialist_available <- !is.na(specialist_col) && specialist_col %in% names(sample)
 
   m <- match_providers(sample, ref, provider_col)
   m$.yr <- suppressWarnings(as.integer(m[[year_col]]))
   m <- dplyr::left_join(m, costs, by = c("lad_code" = "lad_code", ".yr" = "year"))
-  m$has_parent <- if (has_parent_available)
-    as.integer(m[[parent_col]] %in% c(1, TRUE, "Yes", "yes")) else 0L
-  # nominal grant per student (training grant universal; add parental if flagged)
-  m$nominal          <- training + parental * m$has_parent
+  m$has_parent     <- flag01(m, parent_col)
+  m$has_specialist <- flag01(m, specialist_col)
+  # nominal grant per student
+  m$nominal <- training +
+    parental   * m$has_parent +
+    specialist * m$has_specialist
   # real-value measures (each <= nominal when factors <= 1)
   m$real_value_cpih      <- m$nominal * m$infl_factor          # inflation only
   m$real_value_rent      <- m$nominal * m$rent_factor          # local rent (LAD)
@@ -141,6 +158,9 @@ build_real_value <- function(sample, ref, awards, cpih, base_year = 2020,
   m$real_value_hp_ttwa_cpih   <- m$nominal * m$infl_factor * m$hp_factor_ttwa
   if (!has_parent_available)
     message("build_real_value: parent flag '", parent_col,
-            "' not found; parental top-up set to 0 and interaction disabled.")
+            "' not found; parental top-up set to 0.")
+  if (!has_specialist_available)
+    message("build_real_value: specialist flag '", specialist_col,
+            "' not found; specialist top-up set to 0.")
   dplyr::select(m, -.yr)
 }
