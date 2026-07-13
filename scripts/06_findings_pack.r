@@ -46,8 +46,8 @@ set.seed(1)
 
 # ---- CONFIG ----------------------------------------------------------------
 REF_DIR     <- "reference"
-PRIMARY     <- "real_value_rent_ttwa"          # headline CoL measure
-PRIMARY_LBL <- "Rent-adjusted (TTWA)"
+PRIMARY     <- "real_value_rent_ttwa_cpih"   # headline: CPIH x local rent (TTWA)
+PRIMARY_LBL <- "CPIH x rent (TTWA)"
 FE_STUDENT  <- "course + entry_year"
 FE_PANEL    <- "course + year"                # wave FE on panel models
 POUND_STEPS <- c(500, 1000)                   # "GBP X less real LSF" scenarios
