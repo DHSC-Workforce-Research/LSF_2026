@@ -113,25 +113,42 @@ samp <- samp |>
 samp <- samp |> filter(!is.na(rv_gbp))
 
 # ---- typical profile (for smooth curves) ----------------------------------
+# entry_year may be integer or factor (after as_model_df); median needs numeric.
+as_year_num <- function(x) {
+  if (is.null(x)) return(integer(0))
+  if (is.factor(x)) {
+    # prefer labels ("2021") over codes (1,2,3)
+    return(suppressWarnings(as.integer(as.character(x))))
+  }
+  if (is.character(x)) return(suppressWarnings(as.integer(x)))
+  as.integer(x)
+}
+
 modal_course <- samp |>
   count(course, sort = TRUE) |>
   slice(1) |>
   pull(course)
-med_year <- as.integer(stats::median(samp$entry_year, na.rm = TRUE))
+
+med_year_of <- function(x) {
+  y <- as_year_num(x)
+  y <- y[!is.na(y)]
+  if (!length(y)) return(2022L)
+  as.integer(stats::median(y))
+}
 
 typical <- function(data) {
   list(
     course = {
       x <- data$course
       x <- x[!is.na(x)]
-      if (!length(x)) modal_course else names(sort(table(x), decreasing = TRUE))[1]
+      if (!length(x)) as.character(modal_course) else names(sort(table(x), decreasing = TRUE))[1]
     },
-    entry_year = as.integer(stats::median(data$entry_year, na.rm = TRUE)),
-    fund_availability = mean(data$fund_availability, na.rm = TRUE),
-    grant_influence   = mean(data$grant_influence, na.rm = TRUE),
-    crit_course       = mean(data$crit_course, na.rm = TRUE),
-    crit_uni          = mean(data$crit_uni, na.rm = TRUE),
-    grant_helps_stay  = mean(data$grant_helps_stay, na.rm = TRUE)
+    entry_year = med_year_of(data$entry_year),
+    fund_availability = mean(as.numeric(data$fund_availability), na.rm = TRUE),
+    grant_influence   = mean(as.numeric(data$grant_influence), na.rm = TRUE),
+    crit_course       = mean(as.numeric(data$crit_course), na.rm = TRUE),
+    crit_uni          = mean(as.numeric(data$crit_uni), na.rm = TRUE),
+    grant_helps_stay  = mean(as.numeric(data$grant_helps_stay), na.rm = TRUE)
   )
 }
 
@@ -150,10 +167,21 @@ fit_logit <- function(data, y, rhs) {
 pred_curve <- function(model, data, y_name, spec_label, grid = rv_grid) {
   typ <- typical(data)
   # build one-row skeleton then expand grid
+  # factor levels must match the fitted model exactly
+  course_lv <- if ("course" %in% names(model$xlevels)) model$xlevels$course else levels(factor(data$course))
+  year_lv   <- if ("entry_year" %in% names(model$xlevels)) model$xlevels$entry_year else {
+    yn <- as_year_num(data$entry_year)
+    as.character(sort(unique(yn[!is.na(yn)])))
+  }
+  course_use <- as.character(typ$course)
+  if (!length(course_lv) || !course_use %in% course_lv) course_use <- course_lv[1]
+  year_use <- as.character(typ$entry_year)
+  if (!length(year_lv) || !year_use %in% year_lv) year_use <- year_lv[1]
+
   base <- data.frame(
     rv_gbp = grid,
-    course = factor(typ$course, levels = levels(factor(data$course))),
-    entry_year = factor(typ$entry_year, levels = levels(factor(data$entry_year))),
+    course = factor(course_use, levels = course_lv),
+    entry_year = factor(year_use, levels = year_lv),
     fund_availability = typ$fund_availability,
     grant_influence   = typ$grant_influence,
     crit_course       = typ$crit_course,
@@ -161,16 +189,6 @@ pred_curve <- function(model, data, y_name, spec_label, grid = rv_grid) {
     grant_helps_stay  = typ$grant_helps_stay,
     stringsAsFactors = FALSE
   )
-  # ensure factor levels match model
-  for (v in c("course", "entry_year")) {
-    if (v %in% names(model$xlevels)) {
-      base[[v]] <- factor(as.character(base[[v]]), levels = model$xlevels[[v]])
-      # if typical level dropped from model, fall back to first level
-      if (any(is.na(base[[v]]))) {
-        base[[v]] <- factor(model$xlevels[[v]][1], levels = model$xlevels[[v]])
-      }
-    }
-  }
   pr <- stats::predict(model, newdata = base, type = "link", se.fit = TRUE)
   tibble(
     outcome = y_name,
