@@ -1,0 +1,17 @@
+IMMEDIATE FIX: CPIH x local rent is now the REAL LSF headline
+Branch: feat/real-lsf-controlled
+
+Git Bash (paste all):
+
+cd "/c/Users/LSlater2/OneDrive - Department of Health and Social Care/Documents/Local Repos/LSF_2026"
+git fetch origin
+git checkout feat/real-lsf-controlled
+git pull origin feat/real-lsf-controlled
+bash scripts/run_findings_pack.sh
+
+Then paste findings_numbers.txt back.
+
+Construct:
+  real_value_rent_ttwa_cpih = nominal * (CPIH_2020/CPIH_year) * rent_TTWA_haircut
+
+Also available: rent-only, CPIH-only, CPIH x HP, LAD variants.

@@ -5,10 +5,20 @@
 # the three reference CSVs built by build_all.R (Part A). Copy those CSVs into
 # the repo (e.g. a reference/ or _derived/ folder) and point scripts/12 at them.
 #
-# THREE measures, all from a frozen nominal grant:
-#   real_terms       = grant deflated by CPIH only            (inflation, time)
-#   real_value_rent  = grant / local rent cost-index          (space + time via PIPR)
-#   real_value_hp    = grant / local house-price cost-index   (space + time via UK HPI)
+# Real-value measures from a frozen nominal grant:
+#   real_value_cpih              = nominal * infl_factor
+#       pure general inflation (CPIH), time only
+#   real_value_rent[_ttwa]       = nominal * rent_factor[_ttwa]
+#       local housing haircut only (PIPR). Rents move over time so this
+#       PARTLY captures time, but if the wider basket inflates while rents
+#       are flat, purchasing power is still eroded -- that is MISSING here.
+#   real_value_hp[_ttwa]         = nominal * hp_factor[_ttwa]
+#       same idea with house prices (UK HPI)
+#   real_value_rent[_ttwa]_cpih  = nominal * infl_factor * rent_factor[_ttwa]
+#   real_value_hp[_ttwa]_cpih    = nominal * infl_factor * hp_factor[_ttwa]
+#       HEADLINE family: general inflation AND local housing. Both channels.
+#       (Some overlap: housing is in CPIH; still the right policy object for
+#       "frozen nominal + national inflation + local housing costs".)
 # ===========================================================================
 
 # ---- COLUMN MAP (set to the analysis sample's columns) ----------------------
@@ -118,12 +128,17 @@ build_real_value <- function(sample, ref, awards, cpih, base_year = 2020,
     as.integer(m[[parent_col]] %in% c(1, TRUE, "Yes", "yes")) else 0L
   # nominal grant per student (training grant universal; add parental if flagged)
   m$nominal          <- training + parental * m$has_parent
-  # real-value measures, haircut style (each <= nominal), capped at face value
+  # real-value measures (each <= nominal when factors <= 1)
   m$real_value_cpih      <- m$nominal * m$infl_factor          # inflation only
   m$real_value_rent      <- m$nominal * m$rent_factor          # local rent (LAD)
   m$real_value_hp        <- m$nominal * m$hp_factor            # local house price (LAD)
   m$real_value_rent_ttwa <- m$nominal * m$rent_factor_ttwa     # local rent (TTWA)
   m$real_value_hp_ttwa   <- m$nominal * m$hp_factor_ttwa       # local house price (TTWA)
+  # CPIH x local housing (headline): inflation AND place
+  m$real_value_rent_cpih      <- m$nominal * m$infl_factor * m$rent_factor
+  m$real_value_hp_cpih        <- m$nominal * m$infl_factor * m$hp_factor
+  m$real_value_rent_ttwa_cpih <- m$nominal * m$infl_factor * m$rent_factor_ttwa
+  m$real_value_hp_ttwa_cpih   <- m$nominal * m$infl_factor * m$hp_factor_ttwa
   if (!has_parent_available)
     message("build_real_value: parent flag '", parent_col,
             "' not found; parental top-up set to 0 and interaction disabled.")
