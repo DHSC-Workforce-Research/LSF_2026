@@ -19,7 +19,7 @@
 #
 # Curves use a "typical student" profile (modal course, median entry year,
 # mean binary covariates) so the line is smooth with a Wald CI ribbon.
-# Also writes pp change per GBP 1000 less real LSF for callout stats.
+# Also writes pp change per £1,000 less real LSF for callout stats.
 #
 # Run (repo root, after 01):
 #   source("scripts/07_real_value_comms.r", encoding = "UTF-8")
@@ -257,7 +257,7 @@ pred_curve <- function(model, data, y_name, spec_label, grid = rv_grid) {
   )
 }
 
-# pp change when real LSF falls by GBP 1000 around the mean
+# pp change when real LSF falls by £1,000 around the mean
 pp_per_1k <- function(curve) {
   mu <- mean(curve$rv_gbp)
   # interpolate p at mu and mu-1000
@@ -449,7 +449,7 @@ curve_plot <- function(curves, title, subtitle, y_lab, colours = NULL,
     labs(
       title = wrap_title(title),
       subtitle = wrap_sub(subtitle),
-      x = paste0("Real LSF value, GBP (", PRIMARY_LBL, ")"),
+      x = paste0("Real LSF value (£, ", PRIMARY_LBL, ")"),
       y = wrap_title(y_lab, w = 28),
       colour = NULL, fill = NULL,
       caption = wrapcap(src)
@@ -464,7 +464,7 @@ curve_plot <- function(curves, title, subtitle, y_lab, colours = NULL,
     a <- annotate_pp |> dplyr::slice_tail(n = 1)
     # short wrap-friendly callout
     txt <- sprintf(
-      "GBP 1,000 lower real LSF\n(around the mean):\nabout %+.1f pp on\npredicted probability\n(%s)",
+      "£1,000 lower real LSF\n(around the mean):\nabout %+.1f pp on\npredicted probability\n(%s)",
       a$pp_increase_if_1k_less,
       # shorten spec label for the box
       sub("^S([0-9]).*", "S\\1", a$spec)
@@ -519,7 +519,7 @@ p2 <- ggplot(pp_leave_plot, aes(pp_increase_if_1k_less, spec, fill = spec)) +
   labs(
     title = wrap_title("Does the leaving link survive controls?"),
     subtitle = wrap_sub(paste0(
-      "Rise in predicted leaving probability when real LSF is GBP 1,000 lower (around the mean). ",
+      "Rise in predicted leaving probability when real LSF is £1,000 lower (around the mean). ",
       "Same typical-student profile as the curve slide. Larger bar = stronger association."
     )),
     x = "Percentage-point rise in predicted leaving probability",
@@ -599,7 +599,7 @@ p6 <- ggplot(split_curves, aes(rv_gbp, p)) +
     subtitle = wrap_sub(
       "S1 (course + entry year). Left: choice of what/where to study. Right: enrolment influence / helps stay."
     ),
-    x = paste0("Real LSF value, GBP (", PRIMARY_LBL, ")"),
+    x = paste0("Real LSF value (£, ", PRIMARY_LBL, ")"),
     y = "Predicted probability",
     caption = wrapcap(src)
   ) +
@@ -613,30 +613,30 @@ sum_df <- bind_rows(
   leave_pp |> filter(grepl("S2", spec)) |>
     transmute(Outcome = "Leave before finishing",
               Spec = "S2: FE + survey",
-              `pp if GBP 1k less` = sprintf("%+.1f pp", pp_increase_if_1k_less),
+              `pp if £1k less` = sprintf("%+.1f pp", pp_increase_if_1k_less),
               `P at mean` = sprintf("%.0f%%", 100 * p_at_mean),
-              `P if GBP 1k less` = sprintf("%.0f%%", 100 * p_at_mean_minus_1k),
+              `P if £1k less` = sprintf("%.0f%%", 100 * p_at_mean_minus_1k),
               n = format(n, big.mark = ",")),
   conf_pp |> filter(grepl("S1", spec)) |>
     transmute(Outcome = "Low confidence (1-2)",
               Spec = "S1: FE",
-              `pp if GBP 1k less` = sprintf("%+.1f pp", pp_increase_if_1k_less),
+              `pp if £1k less` = sprintf("%+.1f pp", pp_increase_if_1k_less),
               `P at mean` = sprintf("%.0f%%", 100 * p_at_mean),
-              `P if GBP 1k less` = sprintf("%.0f%%", 100 * p_at_mean_minus_1k),
+              `P if £1k less` = sprintf("%.0f%%", 100 * p_at_mean_minus_1k),
               n = format(n, big.mark = ",")),
   aware_res$pp |> filter(grepl("S1", spec)) |>
     transmute(Outcome = "Aware before applying",
               Spec = "S1: FE",
-              `pp if GBP 1k less` = sprintf("%+.1f pp", pp_increase_if_1k_less),
+              `pp if £1k less` = sprintf("%+.1f pp", pp_increase_if_1k_less),
               `P at mean` = sprintf("%.0f%%", 100 * p_at_mean),
-              `P if GBP 1k less` = sprintf("%.0f%%", 100 * p_at_mean_minus_1k),
+              `P if £1k less` = sprintf("%.0f%%", 100 * p_at_mean_minus_1k),
               n = format(n, big.mark = ",")),
   salient_res$pp |> filter(grepl("S1", spec)) |>
     transmute(Outcome = "Funding salient (any)",
               Spec = "S1: FE",
-              `pp if GBP 1k less` = sprintf("%+.1f pp", pp_increase_if_1k_less),
+              `pp if £1k less` = sprintf("%+.1f pp", pp_increase_if_1k_less),
               `P at mean` = sprintf("%.0f%%", 100 * p_at_mean),
-              `P if GBP 1k less` = sprintf("%.0f%%", 100 * p_at_mean_minus_1k),
+              `P if £1k less` = sprintf("%.0f%%", 100 * p_at_mean_minus_1k),
               n = format(n, big.mark = ","))
 )
 
@@ -645,7 +645,7 @@ p7 <- dhsc_table_plot(
   title = wrap_title("Real LSF: probability impact at a glance", w = 48),
   subtitle = wrap_sub(paste0(
     "Predicted probability for a typical student. Real LSF = ", PRIMARY_LBL, ". ",
-    "pp = percentage-point change if real LSF is GBP 1,000 lower around the mean."
+    "pp = percentage-point change if real LSF is £1,000 lower around the mean."
   )),
   caption = wrapcap(src),
   base_size = 14
@@ -653,7 +653,7 @@ p7 <- dhsc_table_plot(
 save_slide(p7, file.path(out, "slide_rv_summary.png"))
 
 # console headline
-cat("\n=== pp rise if real LSF GBP 1,000 lower (around mean) ===\n")
+cat("\n=== pp rise if real LSF £1,000 lower (around mean) ===\n")
 print(as.data.frame(all_pp |> select(outcome, spec, pp_increase_if_1k_less, p_at_mean, p_at_mean_minus_1k, n)))
 cat("\nSlides written to:\n  ", out, "\n", sep = "")
 cat("Drop the slide_rv_*.png files into the DHSC deck (16:9).\n")

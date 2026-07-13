@@ -8,8 +8,8 @@
 # ---------------
 # A. STUDENT-LEVEL (current design, one row per student)
 #    - Real LSF at ENTRY (college + entry_year) -> leaving definitions
-#    - Scaled so you can say: "GBP 1,000 less real LSF -> X% higher odds of leaving"
-#    - Also: GBP 500 / GBP 1 SD for the same models
+#    - Scaled so you can say: "£1,000 less real LSF -> X% higher odds of leaving"
+#    - Also: £500 / £1 SD for the same models
 #
 # B. STUDENT-YEAR PANEL (longitudinal)
 #    - Real LSF attached to EACH survey wave (college + wave year)
@@ -50,7 +50,7 @@ PRIMARY     <- "real_value_rent_ttwa_cpih"   # headline: CPIH x local rent (TTWA
 PRIMARY_LBL <- "CPIH x rent (TTWA)"
 FE_STUDENT  <- "course + entry_year"
 FE_PANEL    <- "course + year"                # wave FE on panel models
-POUND_STEPS <- c(500, 1000)                   # "GBP X less real LSF" scenarios
+POUND_STEPS <- c(500, 1000)                   # "£X less real LSF" scenarios
 SURVEY_VARS <- c("fund_availability", "grant_influence", "crit_course",
                  "crit_uni", "grant_helps_stay")
 # ---------------------------------------------------------------------------
@@ -94,8 +94,8 @@ coef_row <- function(m, term) {
   )
 }
 
-# Translate a log-odds slope on GBP -level real value into "GBP X less -> OR"
-# If model is y ~ rv_pound (real value in pounds), then GBP X LESS real value
+# Translate a log-odds slope on £-level real value into "£X less -> OR"
+# If model is y ~ rv_pound (real value in pounds), then £X LESS real value
 # multiplies odds by exp(-X * b). Report as percent higher odds if >1.
 pound_effect <- function(b, se, pounds_less = 1000) {
   # effect of REDUCING real value by pounds_less
@@ -146,9 +146,9 @@ cpih   <- read_csv(file.path(REF_DIR, "cpih_index.csv"),           show_col_type
 awards <- read_csv(file.path(REF_DIR, "lsf_awards.csv"),           show_col_types = FALSE, progress = FALSE)
 
 # ===========================================================================
-# A. STUDENT-LEVEL: entry real LSF -> leaving, in GBP  units
+# A. STUDENT-LEVEL: entry real LSF -> leaving, in £ units
 # ===========================================================================
-progress("06 A: student-level entry real LSF (GBP  effects) ...")
+progress("06 A: student-level entry real LSF (£ effects) ...")
 
 # force entry-year anchor (column map in real_value.r)
 RV_YEAR_SAVE <- RV_YEAR
@@ -166,7 +166,7 @@ stud <- stud |>
                     "left_2y_plus_early", "considered_leaving")), to_01),
     course = as.character(course),
     entry_year = as.integer(entry_year),
-    # continuous GBP  real value (headline measure)
+    # continuous £ real value (headline measure)
     rv_gbp = as.numeric(.data[[PRIMARY]]),
     rv_sd  = as.numeric(scale(rv_gbp)),
     rv_k   = rv_gbp / 1000
@@ -180,9 +180,9 @@ p90 <- stats::quantile(stud$rv_gbp, 0.90, na.rm = TRUE)
 cat_both("=== A. STUDENT-LEVEL (entry real LSF, ", PRIMARY_LBL, ") ===")
 cat_both("HEADLINE construct: nominal x CPIH_factor x local_rent_TTWA_factor")
 cat_both("(CPIH includes housing nationally; local rent adds place. Slight housing double-count accepted.)")
-cat_both(sprintf("Real LSF GBP distribution: mean=%.0f  SD=%.0f  p10=%.0f  p90=%.0f",
+cat_both(sprintf("Real LSF £distribution: mean=%.0f  SD=%.0f  p10=%.0f  p90=%.0f",
                  mean_gbp, sd_gbp, p10, p90))
-cat_both(sprintf("So 1 SD ~ GBP %.0f of real grant value (CPIH x rent-TTWA).", sd_gbp))
+cat_both(sprintf("So 1 SD ~ £%.0f of real grant value (CPIH x rent-TTWA).", sd_gbp))
 if (all(c("real_value_rent_ttwa", "real_value_cpih") %in% names(stud))) {
   cat_both(sprintf(
     "Compare means: rent-only=%.0f | CPIH-only=%.0f | CPIH x rent (headline)=%.0f",
@@ -205,7 +205,7 @@ specs_a <- tibble::tibble(
     "rv_sd",
     paste("rv_sd", paste(SURVEY_VARS, collapse = " + "), sep = " + ")
   ),
-  scale = c("GBP  level", "GBP  level + survey", "per 1 SD", "per 1 SD + survey"),
+  scale = c("£ level", "£ level + survey", "per 1 SD", "per 1 SD + survey"),
   term  = c("rv_gbp", "rv_gbp", "rv_sd", "rv_sd")
 )
 
@@ -238,7 +238,7 @@ for (i in seq_len(nrow(outcomes_a))) {
       if (y == "left_before_finish" && sp$spec == "S1_gbp") {
         for (k in seq_len(nrow(pe))) {
           cat_both(sprintf(
-            "LEFT BEFORE FINISH | S1 (survey controls) | GBP %s LESS real LSF -> odds of leaving x %.3f (%.3f-%.3f) i.e. about %+.1f%% on the odds | n=%s | p=%.3g",
+            "LEFT BEFORE FINISH | S1 (survey controls) | £%s LESS real LSF -> odds of leaving x %.3f (%.3f-%.3f) i.e. about %+.1f%% on the odds | n=%s | p=%.3g",
             format(pe$pounds_less[k], big.mark = ","),
             pe$OR_if_reduced[k], pe$lo[k], pe$hi[k],
             pe$pct_higher_odds[k],
@@ -249,7 +249,7 @@ for (i in seq_len(nrow(outcomes_a))) {
       if (y == "left_before_finish" && sp$spec == "S0_gbp") {
         for (k in seq_len(nrow(pe))) {
           cat_both(sprintf(
-            "LEFT BEFORE FINISH | S0 (real value only) | GBP %s LESS real LSF -> odds x %.3f (%.3f-%.3f) ~ %+.1f%% on odds | n=%s | p=%.3g",
+            "LEFT BEFORE FINISH | S0 (real value only) | £%s LESS real LSF -> odds x %.3f (%.3f-%.3f) ~ %+.1f%% on odds | n=%s | p=%.3g",
             format(pe$pounds_less[k], big.mark = ","),
             pe$OR_if_reduced[k], pe$lo[k], pe$hi[k],
             pe$pct_higher_odds[k],
@@ -265,11 +265,11 @@ for (i in seq_len(nrow(outcomes_a))) {
                sd_gbp = sd_gbp, mean_gbp = mean_gbp)
       if (y == "left_before_finish" && sp$spec == "S1_sd") {
         cat_both(sprintf(
-          "LEFT BEFORE FINISH | S1 | per +1 SD real LSF (~GBP %.0f more) -> odds of leaving x %.3f (%.3f-%.3f) | n=%s | p=%.3g",
+          "LEFT BEFORE FINISH | S1 | per +1 SD real LSF (~£%.0f more) -> odds of leaving x %.3f (%.3f-%.3f) | n=%s | p=%.3g",
           sd_gbp, o$OR, o$lo, o$hi, format(nrow(d), big.mark = ","), cr$p
         ))
         cat_both(sprintf(
-          "  invert: per -1 SD real LSF (~GBP %.0f less) -> odds x %.3f",
+          "  invert: per -1 SD real LSF (~£%.0f less) -> odds x %.3f",
           sd_gbp, 1 / o$OR
         ))
       }
@@ -462,7 +462,7 @@ if (!file.exists(long_path)) {
         pct_higher_odds = pe$pct_higher_odds
       )
       cat_both(sprintf(
-        "WHICH YEAR | %s | %s | GBP 1000 LESS -> odds x %.3f (%.3f-%.3f) ~ %+.1f%% | n=%s p=%.3g",
+        "WHICH YEAR | %s | %s | £1,000 LESS -> odds x %.3f (%.3f-%.3f) ~ %+.1f%% | n=%s p=%.3g",
         y, term, pe$OR_if_reduced, pe$lo, pe$hi, pe$pct_higher_odds,
         format(nrow(d), big.mark = ","), cr$p
       ))
@@ -484,7 +484,7 @@ if (!file.exists(long_path)) {
         pct_higher_odds = pe$pct_higher_odds
       )
       cat_both(sprintf(
-        "WHICH YEAR JOINT | %s | %s | GBP 1000 LESS -> odds x %.3f (%.3f-%.3f) | n=%s p=%.3g",
+        "WHICH YEAR JOINT | %s | %s | £1,000 LESS -> odds x %.3f (%.3f-%.3f) | n=%s p=%.3g",
         y, term, pe$OR_if_reduced, pe$lo, pe$hi, format(nrow(d), big.mark = ","), cr$p
       ))
     }
@@ -511,7 +511,7 @@ if (!file.exists(long_path)) {
     pct_higher_odds = pe$pct_higher_odds
   )
   cat_both(sprintf(
-    "LAG | real LSF_t -> considered leaving_t | GBP 1000 LESS -> odds x %.3f (%.3f-%.3f) ~ %+.1f%% | n=%s p=%.3g",
+    "LAG | real LSF_t -> considered leaving_t | £1,000 LESS -> odds x %.3f (%.3f-%.3f) ~ %+.1f%% | n=%s p=%.3g",
     pe$OR_if_reduced, pe$lo, pe$hi, pe$pct_higher_odds, format(nrow(d), big.mark = ","), cr$p
   ))
 
@@ -530,7 +530,7 @@ if (!file.exists(long_path)) {
     pct_higher_odds = pe$pct_higher_odds
   )
   cat_both(sprintf(
-    "LAG | real LSF_t -> left next year | GBP 1000 LESS -> odds x %.3f (%.3f-%.3f) ~ %+.1f%% | n=%s p=%.3g",
+    "LAG | real LSF_t -> left next year | £1,000 LESS -> odds x %.3f (%.3f-%.3f) ~ %+.1f%% | n=%s p=%.3g",
     pe$OR_if_reduced, pe$lo, pe$hi, pe$pct_higher_odds, format(nrow(d), big.mark = ","), cr$p
   ))
 
@@ -541,7 +541,7 @@ if (!file.exists(long_path)) {
            !is.na(course), !is.na(year))
   m <- fit_lin(d, "confidence", "rv_gbp_lag1", FE_PANEL)
   cr <- coef_row(m, "rv_gbp_lag1")
-  # linear: GBP 1000 LESS real LSF -> change in confidence points = -1000 * b
+  # linear: £1,000 LESS real LSF -> change in confidence points = -1000 * b
   d_conf <- if (is.finite(cr$b)) -1000 * cr$b else NA_real_
   d_lo   <- if (is.finite(cr$b)) -1000 * (cr$b + 1.96 * cr$se) else NA_real_
   d_hi   <- if (is.finite(cr$b)) -1000 * (cr$b - 1.96 * cr$se) else NA_real_
@@ -554,7 +554,7 @@ if (!file.exists(long_path)) {
     conf_points_if_reduced = d_conf
   )
   cat_both(sprintf(
-    "LAG | real LSF_{t-1} -> confidence_t | GBP 1000 LESS real LSF -> confidence %+.3f points (%.3f to %.3f) on 1-5 scale | n=%s p=%.3g",
+    "LAG | real LSF_{t-1} -> confidence_t | £1,000 LESS real LSF -> confidence %+.3f points (%.3f to %.3f) on 1-5 scale | n=%s p=%.3g",
     d_conf, d_lo, d_hi, format(nrow(d), big.mark = ","), cr$p
   ))
 
@@ -574,7 +574,7 @@ if (!file.exists(long_path)) {
     pct_higher_odds = pe$pct_higher_odds
   )
   cat_both(sprintf(
-    "LAG | real LSF_{t-1} -> low confidence_t (1-2) | GBP 1000 LESS -> odds x %.3f (%.3f-%.3f) ~ %+.1f%% | n=%s p=%.3g",
+    "LAG | real LSF_{t-1} -> low confidence_t (1-2) | £1,000 LESS -> odds x %.3f (%.3f-%.3f) ~ %+.1f%% | n=%s p=%.3g",
     pe$OR_if_reduced, pe$lo, pe$hi, pe$pct_higher_odds, format(nrow(d), big.mark = ","), cr$p
   ))
 
@@ -593,7 +593,7 @@ if (!file.exists(long_path)) {
     pct_higher_odds = pe$pct_higher_odds
   )
   cat_both(sprintf(
-    "LAG | real LSF_{t-1} -> considered leaving_t | GBP 1000 LESS -> odds x %.3f (%.3f-%.3f) ~ %+.1f%% | n=%s p=%.3g",
+    "LAG | real LSF_{t-1} -> considered leaving_t | £1,000 LESS -> odds x %.3f (%.3f-%.3f) ~ %+.1f%% | n=%s p=%.3g",
     pe$OR_if_reduced, pe$lo, pe$hi, pe$pct_higher_odds, format(nrow(d), big.mark = ","), cr$p
   ))
 
@@ -618,17 +618,17 @@ readme <- c(
   "If entry and last-wave real LSF are almost the same (high correlation), year choice",
   "barely matters and the panel lag story is weak (little within-person variation).",
   "",
-  "INTERPRETING GBP  EFFECTS",
+  "INTERPRETING £ EFFECTS",
   "----------------------",
-  "Models use real LSF in pounds. We report: if real LSF were GBP 1000 LOWER,",
+  "Models use real LSF in pounds. We report: if real LSF were £1,000 LOWER,",
   "odds of the bad outcome multiply by OR_if_reduced.",
   "  OR 1.08  => about +8% on the *odds* of leaving (not exactly +8pp probability).",
-  "Confidence models are linear: GBP 1000 less -> change in points on the 1-5 scale.",
+  "Confidence models are linear: £1,000 less -> change in points on the 1-5 scale.",
   "",
   "FILES",
   "-----",
   "findings_numbers.txt                 plain-English lines to paste back",
-  "A_student_level_pound_effects.csv    entry real LSF GBP /SD effects",
+  "A_student_level_pound_effects.csv    entry real LSF £/SD effects",
   "B_panel_which_year_counts.csv        entry vs last-wave real LSF",
   "B_panel_lags.csv                     lag models",
   "B_panel_descriptives.csv             panel coverage + correlations",
