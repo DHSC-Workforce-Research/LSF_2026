@@ -43,6 +43,10 @@ SURVEY_RHS  <- paste(SURVEY_VARS, collapse = " + ")
 COMP_VARS   <- c("parental", "specialist", "regional")
 COMP_RHS    <- paste(COMP_VARS, collapse = " + ")
 
+`%||%` <- function(a, b) {
+  if (is.null(a) || length(a) == 0 || (length(a) == 1 && is.na(a))) b else a
+}
+
 na_or_row <- function(term = "rv", ...) {
   tibble::tibble(term = term, OR = NA_real_, lo = NA_real_, hi = NA_real_,
                  p = NA_real_, ...)
@@ -332,8 +336,6 @@ fit_interact <- function(group, measure_col, measure_label, with_survey = TRUE) 
       p = suppressWarnings(signif(as.numeric(p), 3))
     )
 }
-
-`%||%` <- function(a, b) if (is.null(a) || length(a) == 0 || (length(a) == 1 && is.na(a))) b else a
 
 interact_primary <- bind_rows(
   fit_interact("parental",   PRIMARY, PRIMARY_LBL, TRUE),
