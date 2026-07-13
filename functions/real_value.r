@@ -54,11 +54,11 @@ PROVIDER_ALIASES <- c(
   "OPEN UNIVERSITY - UWE"                    = "Open University(The)",
   "OPEN UNIVERSITY - OXFORD"                 = "Open University(The)",
   "OPEN UNIVERSITY - TORBAY AND SOUTH DEVON" = "Open University(The)",
-  "ROYAL HOLLOWAY UNIVERSITY OF LONDON"      = "Royal Holloway College and Bedford New College",
-  # unmatched on 2026-07 work-machine run (add when register names confirmed):
-  # HEALTH SCIENCES UNIVERSITY, BPP UNIVERSITY LTD, NEW COLLEGE DURHAM,
-  # COLCHESTER INSTITUTE, UNIVERSITY CENTRE SOMERSET, BIRMINGHAM METROPOLITAN COLLEGE
+  "ROYAL HOLLOWAY UNIVERSITY OF LONDON"      = "Royal Holloway College and Bedford New College"
 )
+# unmatched on 2026-07 work-machine run (add to the c() above when register names confirmed):
+# HEALTH SCIENCES UNIVERSITY, BPP UNIVERSITY LTD, NEW COLLEGE DURHAM,
+# COLCHESTER INSTITUTE, UNIVERSITY CENTRE SOMERSET, BIRMINGHAM METROPOLITAN COLLEGE
 # NB "CITY ST GEORGE'S" (the 2025 merger of City, University of London + St
 # George's, University of London) is aliased to the City campus (Islington).
 # St George's medical/nursing students are actually based at Tooting, a
