@@ -7,9 +7,9 @@
 # Also writes a short methods note slide for Arm 1 (entry leave) so the deck
 # is explicit that entry leave is one obs per student.
 #
-# Headline real LSF: CPIH x rent TTWA on nominal package (training + parental
-# + specialist when flagged). Place-year recruitment uses core £5k x factors
-# (place cost index, not student package mix).
+# Headline real LSF: weighted cost-of-living deflator (w*local_rent + (1-w)*CPI)
+# on the nominal package (training + parental + specialist when flagged). Place-
+# year recruitment uses the SAME weighted deflator on core £5k (no package mix).
 #
 # Run after 01 (needs long panel + trajectories + analysis sample):
 #   source("scripts/08_hazard_and_recruitment.r", encoding = "UTF-8")
@@ -27,7 +27,7 @@ set.seed(1)
 # ---- CONFIG ----------------------------------------------------------------
 REF_DIR      <- "reference"
 PRIMARY      <- "real_value_rent_ttwa_cpih"
-PRIMARY_LBL  <- "CPIH x rent (TTWA)"
+PRIMARY_LBL  <- "Weighted CoL rent+CPI (TTWA)"
 MIN_PROVIDER_N <- 50L    # min first-years in a provider-year cell to keep
 MIN_PROVIDER_YEARS <- 3L # providers need this many years in panel
 DROP_YEARS   <- c(2020L) # thin pilot
@@ -111,6 +111,13 @@ coef_row <- function(m, term) {
   tibble(term = term, b = ct[row, "Estimate"], se = ct[row, "Std. Error"],
          p = if (length(pcol)) ct[row, pcol[1]] else NA_real_)
 }
+
+# defensive I/O: a locked CSV (e.g. open in Excel) or a single failed render
+# must NOT abort the run and swallow every slide after it. Warn and continue.
+safe_write <- function(x, f) tryCatch(write_csv(x, f),
+  error = function(e) message("!! write skipped [", basename(f), "]: ", conditionMessage(e)))
+safe_slide <- function(p, f) tryCatch(save_slide(p, f),
+  error = function(e) message("!! slide skipped [", basename(f), "]: ", conditionMessage(e)))
 
 # ===========================================================================
 # LOAD + BUILD PANEL
@@ -208,13 +215,23 @@ panel <- long |>
   left_join(wave_rv, by = c("UniqueID", "year")) |>
   filter(!is.na(rv_gbp))
 
-# Place-year real LSF for recruitment: core £5k x factors (no package mix)
-# Use reference GBP column if present, else compute from factors
-if ("real_value_rent_ttwa_cpih_gbp" %in% names(ref)) {
+# Place-year real LSF for recruitment: core £5k deflated by the SAME weighted
+# cost-of-living index as arms 1-2 (housing weight = HOUSING_WEIGHT, set in
+# functions/real_value.r). No student package mix (place-level, not per-student).
+# Uses the g1 building blocks gen_rel + rent_rel_ttwa; falls back to the legacy
+# product columns only if an older reference build lacks them.
+w_place <- if (exists("HOUSING_WEIGHT")) HOUSING_WEIGHT else 0.5
+if (all(c("gen_rel", "rent_rel_ttwa") %in% names(ref))) {
+  place_year_rv <- ref |>
+    distinct(provider, year, region, lad_code, gen_rel, rent_rel_ttwa) |>
+    mutate(
+      year = as.integer(year),
+      rv_place = 5000 / (w_place * rent_rel_ttwa + (1 - w_place) * gen_rel)
+    )
+} else if ("real_value_rent_ttwa_cpih_gbp" %in% names(ref)) {
   place_year_rv <- ref |>
     distinct(provider, year, region, lad_code,
-             rv_place = real_value_rent_ttwa_cpih_gbp,
-             infl_factor, rent_factor_ttwa) |>
+             rv_place = real_value_rent_ttwa_cpih_gbp) |>
     mutate(year = as.integer(year))
 } else {
   place_year_rv <- ref |>
@@ -461,7 +478,7 @@ cells <- cells |>
     region_f = factor(region)
   )
 
-write_csv(cells, file.path(out, "tbl_recruit_provider_year.csv"))
+safe_write(cells, file.path(out, "tbl_recruit_provider_year.csv"))
 
 # Within-provider variation in real LSF (critical for FE)
 var_diag <- cells |>
@@ -473,7 +490,7 @@ var_diag <- cells |>
     range_rv = max(rv_place) - min(rv_place),
     .groups = "drop"
   )
-write_csv(var_diag, file.path(out, "tbl_recruit_within_provider_var.csv"))
+safe_write(var_diag, file.path(out, "tbl_recruit_within_provider_var.csv"))
 
 message(sprintf(
   "Recruitment cells: %s provider-years, %s providers. Median within-provider SD(real LSF)=£%.0f; median range=£%.0f",
@@ -513,7 +530,7 @@ rec_tbl <- bind_rows(
   rec_row(m_rec1, "S1: provider + year FE (preferred)"),
   rec_row(m_rec_reg, "S2: region + year FE")
 )
-write_csv(rec_tbl, file.path(out, "tbl_recruit_fe_results.csv"))
+safe_write(rec_tbl, file.path(out, "tbl_recruit_fe_results.csv"))
 message("Recruitment: % change in first-year counts if real LSF £1k lower:")
 print(as.data.frame(rec_tbl))
 
@@ -528,7 +545,7 @@ cells_ord <- cells |>
   ungroup() |>
   filter(!is.na(d_log_n), !is.na(d_rv))
 
-write_csv(cells_ord, file.path(out, "tbl_recruit_first_diff.csv"))
+safe_write(cells_ord, file.path(out, "tbl_recruit_first_diff.csv"))
 
 # Slides
 p_var <- ggplot(var_diag, aes(range_rv)) +
@@ -545,7 +562,7 @@ p_var <- ggplot(var_diag, aes(range_rv)) +
     caption = wrapcap("Source: LSF first-year claimants matched to provider cost reference. 2020 dropped.")
   ) +
   theme_comms(14)
-save_slide(p_var, file.path(out, "slide_rv_recruit_within_var.png"))
+safe_slide(p_var, file.path(out, "slide_rv_recruit_within_var.png"))
 
 p_fd <- ggplot(cells_ord, aes(d_rv, d_log_n)) +
   geom_hline(yintercept = 0, colour = grey, linewidth = 0.4) +
@@ -568,7 +585,7 @@ p_fd <- ggplot(cells_ord, aes(d_rv, d_log_n)) +
     ))
   ) +
   theme_comms(14)
-save_slide(p_fd, file.path(out, "slide_rv_recruit_first_diff.png"))
+safe_slide(p_fd, file.path(out, "slide_rv_recruit_first_diff.png"))
 
 # FE results table slide
 rec_show <- rec_tbl |>
@@ -589,12 +606,12 @@ p_rec_tbl <- dhsc_table_plot(
     "Region FE is coarser; S0 has no FE and is confounded by big vs small providers."
   )),
   caption = wrapcap(paste0(
-    "Real LSF = core £5k x ", PRIMARY_LBL,
+    "Real LSF = core £5k, ", PRIMARY_LBL,
     ". 2020 dropped. Min provider panel length and cell size applied. Associational."
   )),
   base_size = 13
 )
-save_slide(p_rec_tbl, file.path(out, "slide_rv_recruit_fe_table.png"))
+safe_slide(p_rec_tbl, file.path(out, "slide_rv_recruit_fe_table.png"))
 
 # ===========================================================================
 # CONSOLE + README
