@@ -534,7 +534,7 @@ safe_write(rec_tbl, file.path(out, "tbl_recruit_fe_results.csv"))
 message("Recruitment: % change in first-year counts if real LSF £1k lower:")
 print(as.data.frame(rec_tbl))
 
-# First-difference style scatter for intuition: within-provider Δ
+# First-difference style scatter for intuition: within-provider change
 cells_ord <- cells |>
   arrange(provider, year) |>
   group_by(provider) |>
