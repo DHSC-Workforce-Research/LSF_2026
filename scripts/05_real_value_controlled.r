@@ -21,7 +21,7 @@ set.seed(1)
 # ---- CONFIG ----------------------------------------------------------------
 REF_DIR     <- "reference"
 PRIMARY     <- "real_value_rent_ttwa_cpih"   # headline: inflation AND local rent
-PRIMARY_LBL <- "CPIH x rent (TTWA)"
+PRIMARY_LBL <- "Weighted CoL rent+CPI (TTWA)"
 FE          <- "course + entry_year"
 
 OUTCOMES <- tibble::tibble(
@@ -33,7 +33,7 @@ OUTCOMES <- tibble::tibble(
 MEASURES <- c(
   real_value_cpih           = "Inflation-only (CPIH)",
   real_value_rent_ttwa      = "Rent only (TTWA)",
-  real_value_rent_ttwa_cpih = "CPIH x rent (TTWA) [headline]",
+  real_value_rent_ttwa_cpih = "Weighted CoL rent+CPI (TTWA) [headline]",
   real_value_rent_cpih      = "CPIH x rent (LAD)",
   real_value_hp_ttwa_cpih   = "CPIH x house price (TTWA)",
   real_value_rent           = "Rent only (LAD)",

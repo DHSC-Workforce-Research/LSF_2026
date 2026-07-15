@@ -50,7 +50,7 @@ measures <- c(
   real_value_hp_ttwa        = "House price only (TTWA)",
   real_value_rent_cpih      = "CPIH x rent (LAD)",
   real_value_hp_cpih        = "CPIH x house price (LAD)",
-  real_value_rent_ttwa_cpih = "CPIH x rent (TTWA) [headline]",
+  real_value_rent_ttwa_cpih = "Weighted CoL rent+CPI (TTWA) [headline]",
   real_value_hp_ttwa_cpih   = "CPIH x house price (TTWA)"
 )
 
