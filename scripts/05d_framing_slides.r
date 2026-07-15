@@ -53,8 +53,13 @@ yr <- max(ref$year, na.rm = TRUE)
 rv_place <- ref |>
   filter(year == yr) |>
   distinct(provider, rent_rel_ttwa, gen_rel) |>
-  mutate(rv = CORE / (w * rent_rel_ttwa + (1 - w) * gen_rel)) |>
-  filter(!is.na(rv))
+  mutate(ci = w * rent_rel_ttwa + (1 - w) * gen_rel) |>
+  filter(!is.na(ci))
+# Anchor so the LOWEST-cost English university area is worth the full £5,000 and
+# every more-expensive area is a discount off that (real value <= face value).
+# This is the place channel only; the time erosion is the separate erosion slide.
+ci_min <- min(rv_place$ci, na.rm = TRUE)
+rv_place <- rv_place |> mutate(rv = CORE * ci_min / ci)
 
 # a recognisable spread of nursing-heavy providers across the cost range; only
 # those whose register name matches are shown (others silently drop).
@@ -99,13 +104,13 @@ p_place <- ggplot(d_place, aes(x = rv, y = lab)) +
     title = wrap_title("The same grant is worth far less where the cost of living is high"),
     subtitle = wrap_sub(paste0(
       "Real value of the universal £5,000 training grant in ", yr,
-      ", deflated by local rent and general prices (housing weight ", w,
-      "). It stretches furthest in low-cost areas and is most eroded in expensive cities.")),
+      ", scaled so it is worth the full £5,000 in the lowest-cost university areas ",
+      "and less where local rents are higher (weighted cost-of-living index, housing weight ", w, ").")),
     x = NULL, y = NULL,
     caption = wrapcap(paste0(
-      "Source: ONS private rents + CPI, DHSC analysis. Real value = £5,000 / [",
-      w, " x (local rent / national 2020) + ", 1 - w,
-      " x (CPI / 2020)]. Illustrative provider selection across the cost range."))
+      "Source: ONS private rents + CPI, DHSC analysis. £5,000 deflated by a weighted local ",
+      "cost-of-living index (rent + general prices), anchored so the lowest-cost English ",
+      "university area equals face value. Illustrative provider selection across the cost range."))
   ) +
   theme_dhsc_slide(15) +
   theme(panel.grid.major.y = element_blank(),
