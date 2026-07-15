@@ -1,7 +1,7 @@
 # ===========================================================================
 # scripts/07_real_value_comms.r
 #
-# Communication pack for REAL LSF (headline: CPIH x rent TTWA).
+# Communication pack for REAL LSF (headline: weighted rent+CPI cost-of-living, TTWA).
 # Builds smooth predicted-probability curves and DHSC 16:9 widescreen slides.
 #
 # Outcomes
@@ -49,7 +49,7 @@ set.seed(1)
 # ---- CONFIG ----------------------------------------------------------------
 REF_DIR     <- "reference"
 PRIMARY     <- "real_value_rent_ttwa_cpih"
-PRIMARY_LBL <- "CPIH x rent (TTWA)"
+PRIMARY_LBL <- "Weighted CoL rent+CPI (TTWA)"
 GRID_N      <- 60L
 # ---------------------------------------------------------------------------
 
