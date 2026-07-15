@@ -25,7 +25,7 @@
 #   source("scripts/07_real_value_comms.r", encoding = "UTF-8")
 #
 # Outputs -> outputs_dir()/real_value_comms/
-#   slide_rv_leave_curve.png
+#   slide_rv_leave_curve.png      (ARM 1: entry real LSF -> leave before finish)
 #   slide_rv_leave_controls.png
 #   slide_rv_unconfident_curve.png
 #   slide_rv_aware_curve.png
@@ -33,6 +33,10 @@
 #   slide_rv_summary.png
 #   tbl_rv_pred_curves.csv
 #   tbl_rv_pp_per_1k.csv
+#
+# Hazard (leave next year) + recruitment (provider x year) are in:
+#   scripts/08_hazard_and_recruitment.r
+# Design note: docs/real_value_three_arms.md
 # ===========================================================================
 
 purrr::walk(list.files("functions", full.names = TRUE), source)
@@ -482,11 +486,12 @@ progress("07: write slides ...")
 # 1 leave curve
 p1 <- curve_plot(
   leave_curves,
-  title = "As real LSF value falls, predicted leaving rises",
+  title = "As real LSF at entry falls, predicted leaving rises",
   subtitle = paste0(
-    "Smooth predicted probability of leaving before finishing vs real grant value. ",
-    "S0 = real LSF only; S1 adds course and entry-year fixed effects; ",
-    "S2 also adds funding survey answers. Ribbon = 95% CI for a typical student."
+    "ARM 1 (main retention): one observation per student. Real LSF is measured at course entry only ",
+    "(not year 2/3 while still enrolled). Outcome = left before finishing (once). ",
+    "S0 = real LSF only; S1 = course + entry-year FE; S2 = + funding survey answers. ",
+    "Ribbon = 95% CI for a typical student. Not individual prediction."
   ),
   y_lab = "Predicted probability of leaving before finishing",
   annotate_pp = leave_pp
@@ -506,10 +511,10 @@ p2 <- ggplot(pp_leave_plot, aes(pp_increase_if_1k_less, spec, fill = spec)) +
   scale_x_continuous(limits = c(0, max(pp_leave_plot$pp_increase_if_1k_less) * 1.35),
                      labels = function(z) paste0(z, " pp")) +
   labs(
-    title = wrap_title("Does the leaving link survive controls?"),
+    title = wrap_title("Entry real LSF and leaving: does the link survive controls?"),
     subtitle = wrap_sub(paste0(
-      "Rise in predicted leaving probability when real LSF is £1,000 lower (around the mean). ",
-      "Same typical-student profile as the curve slide. Larger bar = stronger association."
+      "ARM 1: rise in predicted leave-before-finish probability when entry real LSF is £1,000 lower ",
+      "(around the mean). One student, one outcome. Larger bar = stronger association."
     )),
     x = "Percentage-point rise in predicted leaving probability",
     y = NULL,
