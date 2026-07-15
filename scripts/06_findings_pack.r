@@ -47,7 +47,7 @@ set.seed(1)
 # ---- CONFIG ----------------------------------------------------------------
 REF_DIR     <- "reference"
 PRIMARY     <- "real_value_rent_ttwa_cpih"   # headline: CPIH x local rent (TTWA)
-PRIMARY_LBL <- "CPIH x rent (TTWA)"
+PRIMARY_LBL <- "Weighted CoL rent+CPI (TTWA)"
 FE_STUDENT  <- "course + entry_year"
 FE_PANEL    <- "course + year"                # wave FE on panel models
 POUND_STEPS <- c(500, 1000)                   # "£X less real LSF" scenarios
@@ -178,14 +178,14 @@ p10 <- stats::quantile(stud$rv_gbp, 0.10, na.rm = TRUE)
 p90 <- stats::quantile(stud$rv_gbp, 0.90, na.rm = TRUE)
 
 cat_both("=== A. STUDENT-LEVEL (entry real LSF, ", PRIMARY_LBL, ") ===")
-cat_both("HEADLINE construct: nominal x CPIH_factor x local_rent_TTWA_factor")
-cat_both("(CPIH includes housing nationally; local rent adds place. Slight housing double-count accepted.)")
+cat_both("HEADLINE construct: nominal / [ w*(local_rent/nat_rent_2020) + (1-w)*(CPI/CPI_2020) ], w=0.5")
+cat_both("(Budget-weighted cost-of-living deflator; housing counted once at weight w; CPI excludes owner-occupier housing.)")
 cat_both(sprintf("Real LSF £distribution: mean=%.0f  SD=%.0f  p10=%.0f  p90=%.0f",
                  mean_gbp, sd_gbp, p10, p90))
-cat_both(sprintf("So 1 SD ~ £%.0f of real grant value (CPIH x rent-TTWA).", sd_gbp))
+cat_both(sprintf("So 1 SD ~ £%.0f of real grant value (weighted rent+CPI, TTWA).", sd_gbp))
 if (all(c("real_value_rent_ttwa", "real_value_cpih") %in% names(stud))) {
   cat_both(sprintf(
-    "Compare means: rent-only=%.0f | CPIH-only=%.0f | CPIH x rent (headline)=%.0f",
+    "Compare means: rent-only=%.0f | CPIH-only=%.0f | weighted rent+CPI (headline)=%.0f",
     mean(stud$real_value_rent_ttwa, na.rm = TRUE),
     mean(stud$real_value_cpih, na.rm = TRUE),
     mean_gbp
