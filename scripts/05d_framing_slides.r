@@ -88,12 +88,13 @@ p_place <- ggplot(d_place, aes(x = rv, y = lab)) +
   geom_segment(aes(x = 0, xend = rv, yend = lab), colour = "grey85", linewidth = 0.8) +
   geom_point(aes(colour = rv), size = 5) +
   geom_text(aes(label = gbp(rv)), hjust = -0.15, size = 3.7, colour = ink) +
-  annotate("text", x = CORE, y = matched + 0.35, label = "Face value £5,000",
-           hjust = -0.03, vjust = 0, size = 3.4, colour = grey, family = "Arial") +
+  annotate("text", x = CORE, y = matched + 0.95, label = "Face value £5,000",
+           hjust = 0.5, vjust = 0, size = 3.4, colour = grey, family = "Arial") +
   scale_colour_gradient(low = risk, high = teal, guide = "none") +
   scale_x_continuous(limits = c(0, max(d_place$rv) * 1.20),
                      labels = function(z) paste0("£", format(z, big.mark = ",", trim = TRUE)),
                      expand = expansion(mult = c(0, 0.02))) +
+  scale_y_discrete(expand = expansion(add = c(0.6, 1.6))) +
   labs(
     title = wrap_title("The same grant is worth far less where the cost of living is high"),
     subtitle = wrap_sub(paste0(
