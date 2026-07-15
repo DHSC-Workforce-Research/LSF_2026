@@ -44,22 +44,20 @@ gbp <- function(z) paste0("£", format(round(z), big.mark = ",", trim = TRUE))
 # SLIDE 2 - PLACE: the same grant is worth less where costs are high
 # ===========================================================================
 ref <- read_csv(file.path(REF_DIR, "provider_costofliving.csv"), show_col_types = FALSE)
-if (!all(c("provider", "year", "rent_rel_ttwa", "gen_rel") %in% names(ref)))
-  stop("provider_costofliving.csv missing weighted-index columns; re-run g1.")
+if (!all(c("provider", "year", "rent_rel_ttwa") %in% names(ref)))
+  stop("provider_costofliving.csv missing rent_rel_ttwa; re-run g1.")
 yr <- max(ref$year, na.rm = TRUE)
 
-# real value of the core GBP5,000 grant per provider in the latest year, using
-# the SAME weighted cost-of-living deflator as the analysis (housing weight w).
+# HOUSING ONLY: local rent is the thing that varies across places (CPI is
+# national - identical everywhere in a year - so it adds nothing spatial). Deflate
+# the GBP5,000 grant by LOCAL RENT and anchor so the CHEAPEST rent area in the
+# country is worth the full GBP5,000; every more-expensive area is a discount off
+# that (real value <= face value). Time erosion is the separate erosion slide.
 rv_place <- ref |>
   filter(year == yr) |>
-  distinct(provider, rent_rel_ttwa, gen_rel) |>
-  mutate(ci = w * rent_rel_ttwa + (1 - w) * gen_rel) |>
-  filter(!is.na(ci))
-# Anchor so the LOWEST-cost English university area is worth the full £5,000 and
-# every more-expensive area is a discount off that (real value <= face value).
-# This is the place channel only; the time erosion is the separate erosion slide.
-ci_min <- min(rv_place$ci, na.rm = TRUE)
-rv_place <- rv_place |> mutate(rv = CORE * ci_min / ci)
+  distinct(provider, rent_rel_ttwa) |>
+  filter(!is.na(rent_rel_ttwa)) |>
+  mutate(rv = CORE * min(rent_rel_ttwa) / rent_rel_ttwa)
 
 # a recognisable spread of nursing-heavy providers across the cost range; only
 # those whose register name matches are shown (others silently drop).
@@ -72,10 +70,16 @@ curated <- c(
   "University of Brighton", "University of Oxford",
   "King's College London", "University College London"
 )
-d_place <- rv_place |> filter(provider %in% curated) |> arrange(rv)
+# bookend with the true national extremes: cheapest rent area (= full £5,000) at
+# the top, most expensive at the bottom, recognisable cities in between.
+cheapest_provider <- rv_place |> slice_max(rv, n = 1, with_ties = FALSE) |> pull(provider)
+dearest_provider  <- rv_place |> slice_min(rv, n = 1, with_ties = FALSE) |> pull(provider)
+show_set <- unique(c(cheapest_provider, curated, dearest_provider))
+d_place <- rv_place |> filter(provider %in% show_set) |> arrange(rv)
 matched <- nrow(d_place)
-message("place slide: ", matched, " of ", length(curated), " curated providers matched (year ", yr, ")")
-if (matched < 4) stop("Too few curated providers matched the reference names; check spellings.")
+message("place slide: ", matched, " providers shown (year ", yr, "). National cheapest = ",
+        cheapest_provider, " | dearest = ", dearest_provider)
+if (matched < 4) stop("Too few providers matched; check reference / spellings.")
 
 # short display label (drop "University of", "The", ", Bristol" noise)
 d_place <- d_place |>
@@ -83,7 +87,10 @@ d_place <- d_place |>
            str_replace("^The University of ", "") |>
            str_replace("^University of ", "") |>
            str_replace(", Bristol$", "") |>
-           str_replace(" College London$", " (London)"))
+           str_replace("^King's College London$", "King's (London)") |>
+           str_replace("^University College London$", "UCL") |>
+           str_replace(" College London$", " (London)") |>
+           str_trunc(30))
 stopifnot("two curated providers collapse to the same short label" =
             !any(duplicated(d_place$lab)))
 d_place <- d_place |> mutate(lab = factor(lab, levels = lab))
@@ -103,14 +110,14 @@ p_place <- ggplot(d_place, aes(x = rv, y = lab)) +
   labs(
     title = wrap_title("The same grant is worth far less where the cost of living is high"),
     subtitle = wrap_sub(paste0(
-      "Real value of the universal £5,000 training grant in ", yr,
-      ", scaled so it is worth the full £5,000 in the lowest-cost university areas ",
-      "and less where local rents are higher (weighted cost-of-living index, housing weight ", w, ").")),
+      "How far the universal £5,000 training grant stretches against LOCAL RENT in ", yr,
+      ", scaled so it is worth the full £5,000 where rents are lowest and less where they are ",
+      "higher. The cheapest and most expensive university areas in the country are shown at the ends.")),
     x = NULL, y = NULL,
     caption = wrapcap(paste0(
-      "Source: ONS private rents + CPI, DHSC analysis. £5,000 deflated by a weighted local ",
-      "cost-of-living index (rent + general prices), anchored so the lowest-cost English ",
-      "university area equals face value. Illustrative provider selection across the cost range."))
+      "Source: ONS private rents (TTWA), DHSC analysis. £5,000 deflated by local rent only, ",
+      "anchored so the lowest-rent English university area equals face value. Recognisable ",
+      "providers plus the national cheapest and most expensive."))
   ) +
   theme_dhsc_slide(15) +
   theme(panel.grid.major.y = element_blank(),
