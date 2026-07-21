@@ -1,48 +1,69 @@
 course_raw,programme_code,note
-Adult Nurse,1212,exact DHSC programme name
-Adult Nursing,1212,provisional - confirm against p0 audit
-Nursing (Adult),1212,provisional - confirm against p0 audit
-Children's Nurse,1213,exact DHSC programme name
-Children's Nursing,1213,provisional - confirm against p0 audit
-Child Nursing,1213,provisional - confirm against p0 audit
-Paediatric Nursing,1213,provisional - confirm against p0 audit
-Dual Field Nursing,1216,exact DHSC programme name
-Learning Disabilities Nurse,1217,exact DHSC programme name
-Learning Disability Nursing,1217,provisional - confirm against p0 audit
-Mental Health Nurse,1218,exact DHSC programme name
-Mental Health Nursing,1218,provisional - confirm against p0 audit
-Midwifery,1219,exact DHSC programme name
-Midwife,1219,provisional - confirm against p0 audit
-Dual Professional Qualification Nursing,1231,exact DHSC programme name
-Dental Hygienists,1070,exact DHSC programme name
-Dental Hygiene Therapy,1071,exact DHSC programme name
-Dental Therapist,1230,exact DHSC programme name
-Dental Hygiene,,AMBIGUOUS - 1070/1071/1230 span 231-747 hours. Leave blank unless the audit shows the survey distinguishes them.
-Dental Therapy,,AMBIGUOUS - see above
-Diagnostic Radiographer,1214,exact DHSC programme name
-Diagnostic Radiography,1214,provisional - confirm against p0 audit
-Dietitian,1215,exact DHSC programme name
-Dietetics,1215,provisional - confirm against p0 audit
-Occupational Therapist,1220,exact DHSC programme name
-Occupational Therapy,1220,provisional - confirm against p0 audit
-Operating Department Practitioner,1221,exact DHSC programme name
-Operating Department Practice,1221,provisional - confirm against p0 audit
-Orthoptist,1222,exact DHSC programme name
-Orthoptics,1222,provisional - confirm against p0 audit
-Orthotists/Prosthetics,1223,exact DHSC programme name
-Prosthetics and Orthotics,1223,provisional - confirm against p0 audit
-Paramedic,1224,exact DHSC programme name
-Paramedic Science,1224,provisional - confirm against p0 audit
-Physiotherapist,1225,exact DHSC programme name
-Physiotherapy,1225,provisional - confirm against p0 audit
-Podiatrist,1226,exact DHSC programme name
-Podiatry,1226,provisional - confirm against p0 audit
-Chiropody,1226,provisional - confirm against p0 audit
-Speech & Language Therapist,1227,exact DHSC programme name
-Speech and Language Therapy,1227,provisional - confirm against p0 audit
-Therapeutic Radiographer,1228,exact DHSC programme name
-Therapeutic Radiography,1228,provisional - confirm against p0 audit
-Sonography (Direct Entry),2040,exact DHSC programme name - NO hours value supplied by DHSC
-Sonography,2040,provisional - no hours value regardless
-Undergraduate Clinical Pharmacy (previous B230),1229,exact DHSC programme name
-HCS Practitioner Training Programme (PTP),1232,exact DHSC programme name
+Adult Nursing,1212,exact field
+Adult Nursing - Blended,1212,delivery-mode suffix
+Direct Entry - Adult Nursing,1212,entry-route suffix
+Adult Nursing - MNurs,1212,award suffix
+Adult Nursing - PG Dip,1212,award suffix
+Adult Nursing - Employment based,1212,route suffix
+Nursing with Leadership - Adult Nursing,1212,leadership variant
+Child Nursing,1213,Children's Nurse
+Child Nursing - Blended,1213,delivery-mode suffix
+Direct Entry - Child Nursing,1213,entry-route suffix
+Child Nursing - PG Dip,1213,award suffix
+Child Nursing - MNurs,1213,award suffix
+Child Nursing - Employment based,1213,route suffix
+Nursing with Leadership - Child Nursing,1213,leadership variant
+Mental Health Nursing,1218,exact field
+Mental Health Nursing - Blended,1218,delivery-mode suffix
+Mental Health Nursing - PGDip,1218,award suffix
+Mental Health Nursing - MNurs,1218,award suffix
+Mental Health Nursing - Employment based,1218,route suffix
+Direct Entry - Mental Health,1218,MH nursing entry route
+Nursing with Leadership - Mental Health Nursing,1218,leadership variant
+Learning Disabilities Nursing,1217,exact field
+Learning Disabilities Nursing - Blended,1217,delivery-mode suffix
+Midwifery,1219,exact
+Midwifery - Blended,1219,delivery-mode suffix
+Shortened Midwifery,1219,shortened route
+Midwifery with Public Health - Msci,1219,award variant
+Dual Nursing - Adult and Mental Health,1216,two nursing fields Dual Field
+Dual Nursing - Child and Mental Health,1216,two nursing fields
+Dual Nursing - Adult and Child,1216,two nursing fields
+Dual Nursing - Child and Learning Disabilities,1216,two nursing fields
+Dual Nursing - Mental Health and Learning Disabilities,1216,two nursing fields
+Dual Nursing - Adult and Learning Disabilities,1216,two nursing fields
+Learning Disabilities Nursing and Social Work,1231,FLAG nurse+SW Dual Professional 829h - confirm
+Mental Health Nursing and Social Work,1231,FLAG nurse+SW Dual Professional - confirm
+Child Nursing and Social Work,1231,FLAG nurse+SW Dual Professional - confirm
+Adult Nursing and Social Work,1231,FLAG nurse+SW Dual Professional - confirm
+MSci Nurse Paramedic,1231,FLAG nurse+paramedic dual could be 1224 - confirm
+Physiotherapy,1225,exact
+Paramedic Science,1224,exact
+Paramedic Practice,1224,paramedic variant
+Paramedic Science And Out Of Hospital Care,1224,paramedic variant
+Paramedicine,1224,paramedic variant
+Paramedic Science 2 Years,1224,shortened paramedic
+Occupational Therapy,1220,exact
+BSc Occupational Therapy (Non-Apprenticeship),1220,OT variant
+Diagnostic Radiography,1214,exact
+Speech and Language Therapy,1227,exact
+Language Pathology (MSc),1227,speech-language pathology SLT
+Operating Department Practitioner,1221,exact
+Dietetics,1215,exact
+Nutrition and Dietetics,1215,dietetics variant
+Dietetics and Leadership,1215,leadership variant
+Podiatry,1226,exact
+Podiatry and Leadership,1226,leadership variant
+Orthoptics,1222,exact
+Prosthetics and Orthotics,1223,Orthotists/Prosthetics
+Therapeutic Radiography (Radiotherapy and Oncology),1228,therapeutic radiography
+Radiotherapy and Oncology,1228,therapeutic radiography
+Radiotherapy and Oncology - Blended,1228,delivery-mode suffix
+Dental Hygiene,1070,FLAG Dental Hygienists 231h - confirm
+Dental Therapy,1230,FLAG Dental Therapist 747h - confirm
+Dental Hygiene and Dental Therapy,1071,FLAG Dental Hygiene Therapy dual 375h - confirm
+Healthcare Science PTP Audiology,1232,HCS Practitioner Training Programme
+Healthcare Science BSc Hons Cardiac Physiology,1232,HCS Practitioner Training Programme
+Nursing Associates - Top Up,NA,BLANK not an LSF placement programme
+Oral Health Science,NA,BLANK ambiguous dental degree
+Blended Learning,NA,BLANK no profession recorded
