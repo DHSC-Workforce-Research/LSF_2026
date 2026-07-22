@@ -2,13 +2,13 @@
 # scripts/p4_placement_slides.r
 #
 # U6 - DHSC-theme 16:9 PNGs for the deck. Reads the CSV tables written by p1,
-# p2 and p3 and refits nothing, so a label tweak costs a second rather than a
-# model run.
+# p1b, p2 and p3 and refits nothing, so a label tweak costs a second rather
+# than a model run.
 #
 # Three slides:
-#   1. composition + outcome by hours band. The confounding is IN the chart,
-#      not in the notes: the composition bar sits directly under the outcome
-#      bar so a reader cannot see one without the other.
+#   1. diverging lollipop: placement hours (left) vs leaving before finishing
+#      (right), one row per programme, ranked by hours. If leaving tracked
+#      hours the two sides would mirror. They do not.
 #   2. Arm P1, the £1,000 effect at a low-hours vs a high-hours course.
 #   3. Arm P2, per-family coefficients with families that lack identifying
 #      variation shown as marked-not-estimated rather than dropped.
@@ -40,14 +40,14 @@ wrapcap    <- function(x, w = 128) str_wrap(x, width = w)
 stamp <- format(Sys.Date(), "%Y%m%d")
 pack  <- file.path(outputs_dir(), paste0("placement_hours_pack_", stamp))
 if (!dir.exists(pack)) stop("no pack folder at ", pack,
-                            "\n  Run p1/p2/p3 first.", call. = FALSE)
+                            "\n  Run p1/p1b/p2/p3 first.", call. = FALSE)
 
 # ---- labels ----------------------------------------------------------------
 lab_path <- file.path(pack, "placement_slide_labels.json")
 LAB <- list(
-  s1_title = "Students on long-placement courses, and what that band is made of",
-  s2_title = "A thinner grant bites harder where placements are longer",
-  s3_title = "Comparing courses within the same family",
+  s1_title = "Placement hours vary sixfold across programmes; leaving before finishing does not follow",
+  s2_title = "A thinner grant raises leaving on every course, not just long-placement ones",
+  s3_title = "Within a subject, more placement hours send mixed signals (exploratory)",
   source   = "Source: NHS LSF panel 2020-2026; DHSC programme placement hours, FY26/27."
 )
 if (file.exists(lab_path) && requireNamespace("jsonlite", quietly = TRUE)) {
@@ -65,61 +65,63 @@ rd <- function(f) {
 band_lvl <- c("low", "medium", "high", "unmatched")
 
 # ===========================================================================
-# Slide 1: outcome by band, with composition underneath in the same figure.
+# Slide 1: diverging lollipop - placement hours vs leaving, by programme.
+# Left (blue) = mean placement hours/yr. Right (orange) = % left before
+# finishing. Programmes ranked by hours. Bar length scaled within each metric;
+# tip prints the real value. If leaving tracked hours the sides would mirror.
 # ===========================================================================
-comp <- rd("P1_band_composition_family.csv")
-outc <- rd("P1_outcomes_by_band.csv")
+prog <- rd("P1_outcomes_by_programme.csv")
+if (!is.null(prog)) {
+  progress("p4: slide 1 - programme lollipop ...")
 
-if (!is.null(comp) && !is.null(outc)) {
-  progress("p4: slide 1 - composition + outcome ...")
+  d <- prog |>
+    mutate(hours = suppressWarnings(as.numeric(hours_per_year)),
+           exit  = suppressWarnings(as.numeric(pct_left_before_finish)),
+           fam   = if_else(is.na(course_family), "unmatched", as.character(course_family))) |>
+    filter(!is.na(hours)) |>
+    arrange(hours) |>
+    mutate(prog_lab = sprintf("%s  (%s)", programme_name, fam),
+           prog_lab = factor(prog_lab, levels = prog_lab),
+           x_hours  = -(hours / max(hours, na.rm = TRUE)),
+           x_exit   = exit / max(exit, na.rm = TRUE))
 
-  o <- outc |>
-    filter(outcome == "left_before_finish") |>
-    mutate(band = factor(band, levels = band_lvl),
-           suppressed = value == "suppressed",
-           v = suppressWarnings(as.numeric(ifelse(suppressed, NA, value)))) |>
-    filter(!is.na(band))
+  dl <- d |>
+    pivot_longer(c(x_hours, x_exit), names_to = "metric", values_to = "x") |>
+    mutate(metric = if_else(metric == "x_hours",
+                            "Placement hours per year", "% left before finishing"),
+           metric = factor(metric, levels = c("Placement hours per year",
+                                              "% left before finishing")))
 
-  c1 <- comp |>
-    mutate(band = factor(band, levels = band_lvl),
-           suppressed = share_pct == "suppressed",
-           share = suppressWarnings(as.numeric(ifelse(suppressed, NA, share_pct)))) |>
-    filter(!is.na(band))
-
-  # One panel, not two. The composition is the bar; the outcome is printed
-  # above it. A reader cannot take the outcome number away without the bar it
-  # sits on. Deliberately no patchwork / gridExtra: the work machine is locked
-  # down and every other slide in this repo is a single ggplot.
-  lab_out <- o |>
-    transmute(band,
-              txt = ifelse(suppressed, "left before finishing: suppressed",
-                           sprintf("%.1f%% left before finishing", v)))
-
-  s1 <- ggplot(c1, aes(band, share, fill = family)) +
-    geom_col(width = 0.62, position = position_stack(reverse = TRUE)) +
-    geom_text(data = lab_out, inherit.aes = FALSE,
-              aes(x = band, y = 104, label = txt),
-              size = 4.8, fontface = "bold", colour = ink, vjust = 0) +
-    scale_fill_dhsc() +
-    scale_y_continuous(labels = function(z) paste0(z, "%"),
-                       breaks = seq(0, 100, 25),
-                       expand = expansion(mult = c(0, 0.16))) +
+  s1 <- ggplot(dl, aes(x, prog_lab, colour = metric)) +
+    geom_vline(xintercept = 0, colour = grey, linewidth = 0.6) +
+    geom_segment(aes(x = 0, xend = x, yend = prog_lab), linewidth = 1, na.rm = TRUE) +
+    geom_point(size = 3.6, na.rm = TRUE) +
+    geom_text(data = d, inherit.aes = FALSE,
+              aes(x = x_hours, y = prog_lab, label = round(hours)),
+              hjust = 1.35, size = 3.2, colour = ink) +
+    geom_text(data = subset(d, !is.na(exit)), inherit.aes = FALSE,
+              aes(x = x_exit, y = prog_lab, label = sprintf("%.0f%%", exit)),
+              hjust = -0.35, size = 3.2, colour = ink) +
+    scale_colour_manual(values = c("Placement hours per year" = blue,
+                                   "% left before finishing" = orange), name = NULL) +
+    scale_x_continuous(limits = c(-1.5, 1.5), breaks = NULL) +
+    coord_cartesian(clip = "off") +
     labs(title = wrap_title(LAB$s1_title),
          subtitle = wrap_sub(paste0(
-           "Bars: what each placement-hours band is actually made of. Above each bar: ",
-           "the share of that band who left before finishing. The bands are close to ",
-           "subject groupings, so the number above the bar is not an hours effect - it ",
-           "is whatever the bar underneath it is made of.")),
-         x = "Average placement hours per year (student-weighted tertiles)",
-         y = "Share of band",
+           "Left (blue): mean placement hours per year by programme, DHSC FY26/27. ",
+           "Right (orange): unadjusted percentage leaving before finishing. Programmes ",
+           "ordered by placement hours. Bar length is scaled within each metric; the tip ",
+           "prints the observed value. If leaving tracked hours the two sides would mirror.")),
+         x = NULL, y = NULL,
          caption = wrapcap(paste0(
            LAB$source,
-           " Unadjusted, no controls. Cells below n=10 are marked suppressed, not blanked."))) +
+           " Unadjusted, no controls. Programme cells below n=10 suppressed (no percentage shown)."))) +
     theme_dhsc_slide(15) +
     theme(legend.position = "bottom",
-          plot.margin = margin(16, 22, 12, 14))
+          panel.grid.major.y = element_blank(),
+          plot.margin = margin(16, 40, 12, 14))
 
-  save_slide(s1, file.path(pack, "slide_placement_band_composition.png"))
+  save_slide(s1, file.path(pack, "slide_placement_programme_lollipop.png"))
 }
 
 # ===========================================================================
@@ -154,10 +156,11 @@ if (!is.null(marg)) {
                          labels = function(z) paste0(z, "%")) +
       labs(title = wrap_title(LAB$s2_title),
            subtitle = wrap_sub(paste0(
-             "Change in the odds of leaving before finishing if a student's real grant value ",
-             "were £1,000 lower, quoted for a short-placement and a long-placement course. ",
-             "Course and entry-year fixed effects are held throughout, so this is the same ",
-             "student body compared with itself across places and years.")),
+             "Marginal effect from a logistic model of leaving-before-finishing on ",
+             "(real LSF value x placement hours), with course and entry-year fixed effects. ",
+             "Points: change in odds per £1,000 lower real grant value, evaluated at a ",
+             "short- and a long-placement course. Identified from within-course variation in ",
+             "real value across areas and years.")),
            x = "Change in odds of leaving per £1,000 lower real LSF  (dot = estimate, bar = 95% CI)",
            y = NULL,
            caption = wrapcap(paste0(
@@ -203,10 +206,11 @@ if (!is.null(fam)) {
       scale_x_continuous(limits = c(xr[1] - pad, xr[2] + pad)) +
       labs(title = wrap_title(LAB$s3_title),
            subtitle = wrap_sub(paste0(
-             "Odds of leaving before finishing per 100 extra placement hours a year, ",
-             "comparing courses within the same family. EXPLORATORY: this compares a ",
-             "midwife to an adult nurse, and placement hours are not the only thing that ",
-             "differs between them. Nothing here controls for subject.")),
+             "Odds ratio for leaving-before-finishing per 100 additional placement hours ",
+             "per year, logistic model with course-family (not course) fixed effects. ",
+             "Identified from between-course, within-family variation in programme hours. ",
+             "EXPLORATORY: subject differences within a family are uncontrolled, and no ",
+             "demographic covariates exist on this branch.")),
            x = "Odds ratio per 100 extra placement hours per year (1 = no difference)",
            y = NULL,
            caption = wrapcap(paste0(

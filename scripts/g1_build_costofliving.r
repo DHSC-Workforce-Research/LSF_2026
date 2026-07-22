@@ -2,9 +2,26 @@
 # LSF real-value geography reference  -  Part A (single self-contained build)
 #
 # For every English HEI, the local RENT (ONS PIPR) and HOUSE PRICE (Land
-# Registry UK HPI) it faces by year 2020-2026, plus CPIH inflation and the
-# LSF award schedule. Outputs three CSVs to copy to the work machine:
-#   provider_costofliving.csv   cpih_index.csv   lsf_awards.csv
+# Registry UK HPI) it faces by year 2020-2026, plus CPIH, CPI (general prices
+# excluding owner-occupier housing) and the LSF award schedule. Outputs four
+# CSVs to copy to the work machine:
+#   provider_costofliving.csv   cpih_index.csv   cpi_index.csv   lsf_awards.csv
+#
+# WHAT CHANGED (2026-07-15, the "weighted cost-of-living index" rebuild):
+#   The OLD headline real value was nominal * CPIH_factor * rent_factor, a
+#   PRODUCT of two haircuts. Because housing is ALREADY inside CPIH (the H is
+#   owner-occupier housing), that product counts housing inflation twice and
+#   overstates erosion (a ~2% general + ~2% rent move compounds to ~4%/yr).
+#   The NEW construct treats real value as a proper budget-weighted cost-of-
+#   living deflator: the student's pound buys a fixed basket where housing is
+#   ONE part, counted once at its real budget weight w:
+#       cost_index = w * (local_rent / national_rent_2020)
+#                  + (1 - w) * (CPI / CPI_2020)      # CPI excludes OOH housing
+#       real_value = nominal / cost_index
+#   This script writes the BUILDING BLOCKS (gen_rel, rent_rel*, hp_rel*) into
+#   provider_costofliving.csv; the weight w and the final real_value are set in
+#   functions/real_value.r so w can be changed without re-downloading. The OLD
+#   multiplicative columns are KEPT (suffixed _gbp) for comparison/robustness.
 #
 # All R. readxl reads the ONS .xlsx; httr+jsonlite hit postcodes.io.
 # Run top to bottom. Inputs auto-download to ./data on first run (cached).
@@ -30,6 +47,10 @@ HEI_URL  <- "https://learning-provider.data.ac.uk/data/learning-providers-plus.c
 PIPR_URL <- "https://www.ons.gov.uk/file?uri=/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics/17june2026/priceindexofprivaterentsukmonthlypricestatistics13.xlsx"
 HPI_URL  <- "https://publicdata.landregistry.gov.uk/market-trend-data/house-price-index-data/Average-prices-2026-04.csv"
 CPIH_URL <- "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/l522/mm23"
+# CPI ALL ITEMS index (D7BT, 2015=100). CPI EXCLUDES owner-occupier housing
+# costs by construction, so it is the "general prices without the big housing
+# component" leg of the weighted index (housing is added back via local rent).
+CPI_URL  <- "https://www.ons.gov.uk/generator?format=csv&uri=/economy/inflationandpriceindices/timeseries/d7bt/mm23"
 # ---------------------------------------------------------------------------
 
 data_dir <- file.path(DIR, "data"); dir.create(data_dir, showWarnings = FALSE, recursive = TRUE)
@@ -45,6 +66,7 @@ HEI_CSV  <- grab(HEI_URL,  "hei_providers.csv")
 PIPR_XL  <- grab(PIPR_URL, "pipr_rent.xlsx", binary = TRUE)
 HPI_CSV  <- grab(HPI_URL,  "ukhpi_avg.csv")
 CPIH_CSV <- grab(CPIH_URL, "cpih_l522.csv")
+CPI_CSV  <- grab(CPI_URL,  "cpi_d7bt.csv")
 
 # ---- 1. HEI list -----------------------------------------------------------
 hei <- read_csv(HEI_CSV, show_col_types = FALSE) |>
@@ -197,6 +219,29 @@ cpih <- read_csv(CPIH_CSV, col_names = c("period", "value"), show_col_types = FA
   group_by(year) |> summarise(cpih = mean(v, na.rm = TRUE), .groups = "drop")
 write_csv(cpih, file.path(DIR, "cpih_index.csv"))
 
+# ---- 5b. CPI ALL ITEMS (annual mean of monthly, 2015=100) ------------------
+# General prices EXCLUDING owner-occupier housing. This is the non-housing leg
+# of the weighted cost-of-living index (housing is added once, via local rent).
+# Same monthly-to-annual collapse as CPIH.
+cpi <- read_csv(CPI_CSV, col_names = c("period", "value"), show_col_types = FALSE) |>
+  filter(str_detect(period, "^[0-9]{4} [A-Z]{3}$")) |>
+  mutate(year = as.integer(str_sub(period, 1, 4)), v = as.numeric(value)) |>
+  filter(year %in% YEARS) |>
+  group_by(year) |> summarise(cpi = mean(v, na.rm = TRUE), .groups = "drop")
+write_csv(cpi, file.path(DIR, "cpi_index.csv"))
+
+# ---- 5c. Fixed 2020 national anchors (base for the weighted cost index) -----
+# The weighted index compares each place-year cost to the NATIONAL 2020 level
+# (a fixed base), so the index carries BOTH the cross-place level (channel 1:
+# some places cost more) AND the over-time rise (channel 2: everything got
+# dearer). Nominal package variation (channel 3) enters later in real_value.r.
+BASE_YEAR     <- 2020L
+nat_rent_base <- nat_rent$nat_rent_all[nat_rent$year == BASE_YEAR][1]
+nat_hp_base   <- nat_hp$nat_house_price[nat_hp$year == BASE_YEAR][1]
+cpi_base      <- cpi$cpi[cpi$year == BASE_YEAR][1]
+if (any(is.na(c(nat_rent_base, nat_hp_base, cpi_base))))
+  stop("Missing a 2020 national anchor (rent / house price / CPI). Check inputs.")
+
 # ---- 6. LSF award schedule (England £/yr, non-means-tested, frozen 2020-26) --
 # Verified vs gov.uk LSF guidance 7th-9th editions (2023-26). TDAE (expenditure)
 # and ESF (hardship, up to £3,000) are variable and excluded from the schedule.
@@ -221,12 +266,23 @@ ref <- hei |>
   left_join(nat_rent,  by = "year") |>
   left_join(nat_hp,    by = "year") |>
   left_join(cpih,      by = "year") |>
+  left_join(cpi,       by = "year") |>
   mutate(rent_all    = coalesce(rent_all, reg_rent_all),   # region fallback (LAD)
          house_price = coalesce(house_price, reg_hp),
          ttwa_rent   = coalesce(ttwa_rent, rent_all),      # LAD fallback (TTWA)
          ttwa_hp     = coalesce(ttwa_hp, house_price),
-         cost_index_rent = rent_all    / nat_rent_all,
-         cost_index_hp   = house_price / nat_house_price) |>
+         cost_index_rent = rent_all    / nat_rent_all,      # LEGACY: vs SAME-year national
+         cost_index_hp   = house_price / nat_house_price,   # LEGACY: vs SAME-year national
+         # ---- building blocks for the NEW weighted cost-of-living index -----
+         # all relative to the FIXED 2020 national anchor (so they carry both
+         # the cross-place level and the over-time rise). Each ~1 in cheap-2020
+         # places, >1 in expensive places / later years. real_value.r combines
+         # rent_rel* (housing leg) with gen_rel (non-housing leg) at weight w.
+         gen_rel       = cpi        / cpi_base,             # general prices (CPI ex OOH) vs 2020
+         rent_rel      = rent_all   / nat_rent_base,        # local rent (LAD)  vs national 2020
+         rent_rel_ttwa = ttwa_rent  / nat_rent_base,        # local rent (TTWA) vs national 2020
+         hp_rel        = house_price / nat_hp_base,          # local house price (LAD)  vs national 2020
+         hp_rel_ttwa   = ttwa_hp    / nat_hp_base) |>        # local house price (TTWA) vs national 2020
   select(-reg_rent_all, -reg_hp)
 
 # ---- 7b. Centralised REAL VALUE (haircut: cheapest area in base year = full £) ---
@@ -283,4 +339,23 @@ ref |> filter(year == 2025,
   arrange(-rv_lad) |> as.data.frame() |> print(row.names = FALSE)
 cat("\nTTWA coverage: ", sum(!is.na(ref$ttwa_rent[ref$year==2025])), "/",
     sum(ref$year==2025), " HEI-rows have a TTWA rent\n", sep = "")
-message("\nWritten: provider_costofliving.csv, cpih_index.csv, lsf_awards.csv")
+
+# NEW weighted-index building blocks: general (CPI) erosion, and a worked cost
+# index at w=0.5 for a cheap vs an expensive place. This is what real_value.r
+# turns into real_value = nominal / cost_index.
+cat("\nCPI (ex-housing) general erosion of a frozen 5000 grant (non-housing leg only):\n")
+tibble(year = YEARS) |>
+  left_join(cpi, by = "year") |>
+  mutate(gen_rel = cpi / cpi_base,
+         real_value_general_only = round(5000 / gen_rel)) |>
+  select(year, real_value_general_only) |> as.data.frame() |> print(row.names = FALSE)
+cat("\nWorked weighted cost index (w=0.5) and real value of a 5000 grant, 2025:\n")
+ref |> filter(year == 2025,
+              provider %in% c("University of Sunderland", "University of Oxford",
+                              "King's College London")) |>
+  transmute(provider, ttwa = ttwa_name,
+            cost_index_w50 = round(0.5 * rent_rel_ttwa + 0.5 * gen_rel, 3),
+            real_value_w50 = round(5000 / (0.5 * rent_rel_ttwa + 0.5 * gen_rel))) |>
+  arrange(-real_value_w50) |> as.data.frame() |> print(row.names = FALSE)
+
+message("\nWritten: provider_costofliving.csv, cpih_index.csv, cpi_index.csv, lsf_awards.csv")
