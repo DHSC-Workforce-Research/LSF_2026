@@ -1,0 +1,25 @@
+programme_code,programme_name,hours_per_year,course_family
+1212,Adult Nurse,706,nursing
+1213,Children's Nurse,694,nursing
+1216,Dual Field Nursing,741,nursing
+1217,Learning Disabilities Nurse,718,nursing
+1218,Mental Health Nurse,714,nursing
+1219,Midwifery,757,nursing
+1231,Dual Professional Qualification Nursing,829,nursing
+1070,Dental Hygienists,231,dental
+1071,Dental Hygiene Therapy,375,dental
+1230,Dental Therapist,747,dental
+1214,Diagnostic Radiographer,447,ahp
+1215,Dietitian,354,ahp
+1220,Occupational Therapist,367,ahp
+1221,Operating Department Practitioner,668,ahp
+1222,Orthoptist,369,ahp
+1223,Orthotists/Prosthetics,416,ahp
+1224,Paramedic,449,ahp
+1225,Physiotherapist,368,ahp
+1226,Podiatrist,272,ahp
+1227,Speech & Language Therapist,223,ahp
+1228,Therapeutic Radiographer,420,ahp
+2040,Sonography (Direct Entry),,ahp
+1229,Undergraduate Clinical Pharmacy (previous B230),143,other
+1232,HCS Practitioner Training Programme (PTP),387,other

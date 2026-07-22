@@ -42,11 +42,17 @@ samp <- build_real_value(SAMPLE, ref, awards, cpih, base_year = 2020)
 cat(sprintf("  done in %.1fs\n", as.numeric(Sys.time() - t0, units = "secs")))
 have_parent <- any(samp$has_parent == 1L, na.rm = TRUE)
 
-measures <- c(real_value_cpih      = "Inflation-only (CPIH)",
-              real_value_rent      = "Rent-adjusted (LAD)",
-              real_value_hp        = "House-price-adjusted (LAD)",
-              real_value_rent_ttwa = "Rent-adjusted (TTWA)",
-              real_value_hp_ttwa   = "House-price-adjusted (TTWA)")
+measures <- c(
+  real_value_cpih           = "Inflation-only (CPIH)",
+  real_value_rent           = "Rent only (LAD)",
+  real_value_hp             = "House price only (LAD)",
+  real_value_rent_ttwa      = "Rent only (TTWA)",
+  real_value_hp_ttwa        = "House price only (TTWA)",
+  real_value_rent_cpih      = "CPIH x rent (LAD)",
+  real_value_hp_cpih        = "CPIH x house price (LAD)",
+  real_value_rent_ttwa_cpih = "Weighted CoL rent+CPI (TTWA) [headline]",
+  real_value_hp_ttwa_cpih   = "CPIH x house price (TTWA)"
+)
 
 # extract Wald odds ratios DIRECTLY from the fitted model - deliberately NOT
 # using broom::tidy(conf.int=TRUE), which defaults to profile-likelihood CIs

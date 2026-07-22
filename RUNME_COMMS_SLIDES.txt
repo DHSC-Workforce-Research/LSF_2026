@@ -1,0 +1,19 @@
+Real LSF communication slides (CPIH x rent headline)
+
+Git Bash:
+cd "/c/Users/LSlater2/OneDrive - Department of Health and Social Care/Documents/Local Repos/LSF_2026"
+git pull origin feat/real-lsf-controlled
+
+RStudio (repo root):
+source("scripts/07_real_value_comms.r", encoding = "UTF-8")
+
+Outputs (16:9 PNG, DHSC theme):
+  .../outputs/real_value_comms/slide_rv_leave_curve.png
+  .../outputs/real_value_comms/slide_rv_leave_controls.png
+  .../outputs/real_value_comms/slide_rv_unconfident_curve.png
+  .../outputs/real_value_comms/slide_rv_aware_curve.png
+  .../outputs/real_value_comms/slide_rv_salient_curve.png
+  .../outputs/real_value_comms/slide_rv_salient_split.png
+  .../outputs/real_value_comms/slide_rv_summary.png
+
+Also tables: tbl_rv_pred_curves.csv, tbl_rv_pp_per_1k.csv
