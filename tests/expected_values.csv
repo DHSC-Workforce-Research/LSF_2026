@@ -1,0 +1,33 @@
+id,label,expected,tol,kind,source,note
+panel_students,Panel distinct students,290947,0,count,B_panel_descriptives.csv,Frozen 2026-07-15
+panel_student_years,Panel student-year rows,606548,0,count,B_panel_descriptives.csv,Frozen 2026-07-15
+panel_pct_wave_rv,Percent rows with wave real LSF,,1,stat,B_panel_descriptives.csv,capture
+arm1_s1_or_sd,Arm1 spec ladder S1 OR per SD,0.899,3,stat,tbl_rv_spec_ladder.csv,Frozen 2026-07-15 headline
+arm1_s1_lo,Arm1 S1 CI low,,3,stat,tbl_rv_spec_ladder.csv,capture
+arm1_s1_hi,Arm1 S1 CI high,,3,stat,tbl_rv_spec_ladder.csv,capture
+arm1_s1_p,Arm1 S1 p,,3,stat,tbl_rv_spec_ladder.csv,capture
+arm1_s3_or_sd,Arm1 confidence-controlled S3 OR per SD,0.856,3,stat,tbl_rv_spec_ladder.csv,Frozen 2026-07-15
+arm1_s3_lo,Arm1 S3 CI low,,3,stat,tbl_rv_spec_ladder.csv,capture
+arm1_s3_hi,Arm1 S3 CI high,,3,stat,tbl_rv_spec_ladder.csv,capture
+arm1_s3_p,Arm1 S3 p,,3,stat,tbl_rv_spec_ladder.csv,capture
+arm1_s0k_or,Arm1 S0 OR per GBP1000 (approx +6.4pct),,3,stat,tbl_rv_spec_ladder.csv,capture; frozen note S0 +6.4pct per 1k
+arm1_s1k_or,Arm1 S1 OR per GBP1000 (approx +8.0pct),,3,stat,tbl_rv_spec_ladder.csv,capture; frozen note S1 +8.0pct per 1k
+arm2_hazard_s1_or,Arm2 hazard S1 OR per 1k less,1.050,3,stat,tbl_hazard_1k.csv,Frozen 2026-07-15
+arm2_hazard_s1_n,Arm2 hazard S1 n,270028,0,count,tbl_hazard_1k.csv,Frozen 2026-07-15
+arm2_hazard_s1_p,Arm2 hazard S1 p,,4,stat,tbl_hazard_1k.csv,capture
+arm2_hazard_s1_lo,Arm2 hazard S1 CI low,,3,stat,tbl_hazard_1k.csv,capture
+arm2_hazard_s1_hi,Arm2 hazard S1 CI high,,3,stat,tbl_hazard_1k.csv,capture
+arm2_hazard_s0_or,Arm2 hazard S0 OR per 1k less,,3,stat,tbl_hazard_1k.csv,capture
+arm2_hazard_s0_n,Arm2 hazard S0 n,,0,count,tbl_hazard_1k.csv,capture
+arm2_hazard_s0_p,Arm2 hazard S0 p,,4,stat,tbl_hazard_1k.csv,capture
+arm3_prov_pct,Arm3 provider+year FE pct change if 1k less,16.3,1,stat,tbl_recruit_fe_results.csv,Frozen 2026-07-15 (null under FE)
+arm3_prov_p,Arm3 provider+year FE p,0.27,2,stat,tbl_recruit_fe_results.csv,Frozen 2026-07-15
+arm3_prov_ncells,Arm3 provider+year FE n cells,,0,count,tbl_recruit_fe_results.csv,capture
+arm3_reg_pct,Arm3 region+year FE pct change if 1k less,7.9,1,stat,tbl_recruit_fe_results.csv,Frozen 2026-07-15
+arm3_reg_p,Arm3 region+year FE p,0.54,2,stat,tbl_recruit_fe_results.csv,Frozen 2026-07-15
+arm3_reg_ncells,Arm3 region+year FE n cells,,0,count,tbl_recruit_fe_results.csv,capture
+arm3_s0_pct,Arm3 no-FE pct change if 1k less,,1,stat,tbl_recruit_fe_results.csv,capture
+arm3_s0_p,Arm3 no-FE p,,4,stat,tbl_recruit_fe_results.csv,capture
+erosion_real_end,Erosion real value of frozen 5000 grant,3856,0,count,reference/cpi_index.csv,Frozen 2026-07-15 recomputed
+erosion_pct_of_face,Erosion percent of face value,77,0,count,reference/cpi_index.csv,Frozen 2026-07-15 recomputed
+erosion_loss_pct,Erosion percent lost since 2020,23,0,count,reference/cpi_index.csv,Frozen 2026-07-15 recomputed
