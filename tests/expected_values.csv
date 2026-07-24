@@ -1,7 +1,8 @@
 id,label,expected,tol,kind,source,note
-panel_students,Panel distinct students,290947,0,count,B_panel_descriptives.csv,Frozen 2026-07-15
+panel_students,Distinct students in the student-year panel,290454,0,count,B_panel_descriptives.csv,"Corrected 2026-07-24; plan froze 290947, which this table never produced (13 Jul and 15 Jul packs both 290454)"
 panel_student_years,Panel student-year rows,606548,0,count,B_panel_descriptives.csv,Frozen 2026-07-15
 panel_pct_wave_rv,Percent rows with wave real LSF,,1,stat,B_panel_descriptives.csv,capture
+sample_students,Students in the analysis sample,222174,0,count,lsf_analysis_sample.rds,Observed 2026-07-24 on the work machine
 arm1_s1_or_sd,Arm1 spec ladder S1 OR per SD,0.899,3,stat,tbl_rv_spec_ladder.csv,Frozen 2026-07-15 headline
 arm1_s1_lo,Arm1 S1 CI low,,3,stat,tbl_rv_spec_ladder.csv,capture
 arm1_s1_hi,Arm1 S1 CI high,,3,stat,tbl_rv_spec_ladder.csv,capture

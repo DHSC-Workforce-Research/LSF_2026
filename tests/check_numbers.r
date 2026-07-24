@@ -87,9 +87,22 @@ erosion <- function() {
 
 PROBES <- list(
   # --- panel size (findings pack B) ---
+  # panel_students counts DISTINCT STUDENTS APPEARING IN THE STUDENT-YEAR PANEL,
+  # i.e. n_distinct(panel$UniqueID) in 06. It is not the analysis sample size
+  # (sample_students below) and not the number of students in the extract. The
+  # plan originally froze 290,947 here; that figure is not produced by this
+  # table in any pack (13 Jul and 15 Jul both give 290,454 on an identical
+  # 606,548 student-years) and was corrected on 2026-07-24.
   panel_students        = function() { d <- read_tbl("B_panel_descriptives.csv"); as.numeric(d$n_students[1]) },
   panel_student_years   = function() { d <- read_tbl("B_panel_descriptives.csv"); as.numeric(d$n_student_years[1]) },
   panel_pct_wave_rv     = function() { d <- read_tbl("B_panel_descriptives.csv"); as.numeric(d$pct_wave_rv[1]) },
+
+  # --- stage 1 output size: the student-level analysis sample every model uses.
+  # Pins 01_data.r directly, so a sample-construction change during the refactor
+  # fails here rather than showing up as drift in a downstream odds ratio.
+  sample_students = function() {
+    nrow(readRDS(file.path(derived_dir(), "lsf_analysis_sample.rds")))
+  },
 
   # --- Arm 1: spec ladder, primary outcome left_before_finish ---
   arm1_s1_or_sd = function() { d <- read_tbl("tbl_rv_spec_ladder.csv"); pick(d, d$spec == "S1" & d$outcome_var == "left_before_finish" & d$term == "rv", "OR") },
@@ -225,7 +238,9 @@ if (MODE == "capture") {
     }
   }
   spec$expected_num <- NULL
-  write.csv(spec, EXPECTED_CSV, row.names = FALSE, quote = FALSE)
+  # quote = TRUE, not FALSE: a label or note containing a comma would otherwise
+  # be written unquoted and split into extra columns, corrupting the baseline.
+  write.csv(spec, EXPECTED_CSV, row.names = FALSE, quote = TRUE)
   cat(sprintf("\n  captured %d baseline value(s) into %s\n", filled, EXPECTED_CSV))
   if (frozen_bad > 0)
     cat(sprintf("  WARNING: %d hard-coded frozen number(s) did NOT match current outputs.\n",
