@@ -52,7 +52,7 @@ deck_manifest <- function() {
     "D. Robustness",     14L, "auc",                               "Honest ceiling: how well can we predict",          "build_slide_auc",                   "tbl_auc_decile.csv;tbl_auc_summary.csv",             "03_visualise",
     # --- E. Placement hours annex ---
     "E. Placement",      15L, "placement_programme_lollipop",      "Placement hours by programme",                     "build_slide_placement_lollipop",    "P1_outcomes_by_programme.csv",                   "p4_placement_slides",
-    "E. Placement",      16L, "placement_interaction",             "Hours x real value interaction",                   "build_slide_placement_interaction", "P2_interaction_results.csv",                     "p4_placement_slides",
+    "E. Placement",      16L, "placement_interaction",             "Hours x real value interaction",                   "build_slide_placement_interaction", "P2_marginal_by_hours.csv",                     "p4_placement_slides",
     "E. Placement",      17L, "placement_family_fe",               "Placement hours under family FE",                  "build_slide_placement_family_fe",   "P3_family_fe_results.csv",                       "p4_placement_slides",
     # --- F. Equity (funding triangle) annex ---
     # Source tables verified against what the scripts actually write (2026-07-24):
