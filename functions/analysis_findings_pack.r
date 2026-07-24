@@ -124,7 +124,7 @@ analysis_findings_pack <- function() {
   # force entry-year anchor (column map in real_value.r)
   RV_YEAR_SAVE <- RV_YEAR
   # already entry_year by default
-  stud <- build_real_value(SAMPLE, ref, awards, cpih, base_year = 2020)
+  stud <- rv_entry_sample(ref, awards, cpih, .label = "06 strand A (entry)")
   if (!"parental" %in% names(stud)) stud$parental <- stud$has_parent == 1L
   if (!"specialist" %in% names(stud)) stud$specialist <- FALSE
 
@@ -323,6 +323,27 @@ analysis_findings_pack <- function() {
         left_next = as.integer(at_risk & year == last_wave)
       )
 
+    # -------------------------------------------------------------------------
+    # WAVE-LEVEL REAL VALUE: CORE GRANT ONLY, NOT THE FULL PACKAGE.
+    #
+    # parent_col = NA_character_ and parental = 0L disable the top-ups, so this
+    # measure is the core training grant deflated by place and year. It is NOT
+    # the same construct as 08's wave measure, which keeps the parental and
+    # specialist top-ups and is therefore on the full package.
+    #
+    # Consequence, flagged 2026-07-24 and NOT changed here: the panel
+    # descriptives, the which-year-counts table and the lag / mechanism models
+    # below all run on the core-only wave measure, while the headline hazard
+    # (Arm 2, OR 1.050) runs on the package measure in 08. REAL_VALUE_THREE_ARMS.md
+    # says the headline construct is on "the student's nominal package", so this
+    # deviates from the stated design.
+    #
+    # There is a defensible reason to keep it: the top-ups are close to fixed
+    # per student, so for a WITHIN-student lag design they add cross-sectional
+    # spread without adding the within-person variation the model identifies
+    # off. But it was undocumented, and a reader could not have told. Lee to
+    # decide whether to align the two or keep them apart and say so on the slide.
+    # -------------------------------------------------------------------------
     # --- wave-specific real LSF: match college_use + YEAR (not only entry_year)
     # temporarily point RV columns at wave fields via a thin wrapper sample
     wave_samp <- long |>
@@ -338,7 +359,8 @@ analysis_findings_pack <- function() {
     # build_real_value expects analysis-sample-like cols; parental optional
     wave_rv <- build_real_value(
       as.data.frame(wave_samp), ref, awards, cpih, base_year = 2020,
-      provider_col = "college", year_col = "entry_year", parent_col = NA_character_
+      provider_col = "college", year_col = "entry_year", parent_col = NA_character_,
+      .label = "06 wave panel"
     ) |>
       transmute(
         UniqueID, year,

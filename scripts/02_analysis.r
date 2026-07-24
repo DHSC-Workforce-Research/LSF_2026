@@ -39,6 +39,8 @@ suppressMessages({
   library(purrr); library(fixest); library(tibble)
 })
 
+rv_trace_reset()   # see rv_trace_report() at the foot of this script
+
 progress("02_analysis: panel ...")
 analysis_panel()
 
@@ -77,5 +79,7 @@ progress("02_analysis: equity triangle annex ...")
 try_analysis("confidence bands",  analysis_confidence_bands)
 try_analysis("triangle rates",    analysis_triangle_rates)
 try_analysis("triangle cross-question", analysis_triangle_cross)
+
+rv_trace_report()
 
 progress("02_analysis.r complete -> ", outputs_dir())

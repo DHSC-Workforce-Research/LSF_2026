@@ -137,7 +137,8 @@ build_real_value_sample <- function(sample = NULL) {
 
   cat("Building real-value measures...\n")
   t0 <- Sys.time()
-  samp <- build_real_value(SAMPLE, ref, awards, cpih, base_year = BASE_YEAR)
+  samp <- build_real_value(SAMPLE, ref, awards, cpih, base_year = BASE_YEAR,
+                           .label = "01_data entry sample")
   cat(sprintf("  done in %.1fs\n", as.numeric(Sys.time() - t0, units = "secs")))
 
   saveRDS(samp, file.path(derived_dir(), "lsf_real_value_sample.rds"))

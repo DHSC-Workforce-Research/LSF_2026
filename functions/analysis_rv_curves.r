@@ -98,7 +98,7 @@ analysis_rv_curves <- function() {
   cpih   <- read_csv(file.path(REF_DIR, "cpih_index.csv"),           show_col_types = FALSE, progress = FALSE)
   awards <- read_csv(file.path(REF_DIR, "lsf_awards.csv"),           show_col_types = FALSE, progress = FALSE)
 
-  samp <- build_real_value(SAMPLE, ref, awards, cpih, base_year = 2020)
+  samp <- rv_entry_sample(ref, awards, cpih, .label = "07 curves (entry)")
   if (!"parental"   %in% names(samp)) samp$parental   <- 0L
   if (!"specialist" %in% names(samp)) samp$specialist <- 0L
   if (!"regional"   %in% names(samp)) samp$regional   <- 0L

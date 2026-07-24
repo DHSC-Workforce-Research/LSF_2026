@@ -205,7 +205,8 @@ analysis_hazard_recruitment <- function() {
 
   wave_rv <- build_real_value(
     as.data.frame(wave_samp), ref, awards, cpih, base_year = 2020,
-    provider_col = "college", year_col = "entry_year"
+    provider_col = "college", year_col = "entry_year",
+    .label = "08 wave hazard"
   ) |>
     transmute(
       UniqueID, year,
