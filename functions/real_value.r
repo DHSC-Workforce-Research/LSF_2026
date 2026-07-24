@@ -2,7 +2,7 @@
 # real_value.r  ->  goes in functions/ of the LSF_2026 repo (auto-sourced)
 #
 # Attaches the "real value of the LSF" measures to the analysis sample, using
-# the reference CSVs built by scripts/g1_build_costofliving.r.
+# the reference CSVs built by scripts/90_build_reference.r.
 #
 # WHAT CHANGED (2026-07-15, the "weighted cost-of-living index" rebuild):
 #   OLD headline: nominal * CPIH_factor * rent_factor  (a PRODUCT of two
