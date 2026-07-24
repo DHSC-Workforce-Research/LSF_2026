@@ -48,8 +48,8 @@ deck_manifest <- function() {
     "C. Finding",        11L, "rv_recruit_effect",                 "Arm 3: no recruitment signal within providers",    "build_slide_rv_recruit_effect",     "tbl_recruit_fe_results.csv",                     "05e_recruit_effect_slide",
     # --- D. Robustness: the answers to "is it just selection?" ---
     "D. Robustness",     12L, "rv_spec_ladder",                    "Arm 1: robust across the spec ladder",             "build_slide_rv_spec_ladder",        "tbl_rv_spec_ladder.csv",                         "05b_visualise_real_value",
-    "D. Robustness",     13L, "survivorship",                      "Survivorship and selection",                       "build_slide_survivorship",          "tbl_survivorship.csv",                           "02_analyse",
-    "D. Robustness",     14L, "auc",                               "Honest ceiling: how well can we predict",          "build_slide_auc",                   "tbl_rv_auc.csv;tbl_auc_summary.csv",             "02_analyse",
+    "D. Robustness",     13L, "survivorship",                      "Survivorship and selection",                       "build_slide_survivorship",          "tbl_survivorship.csv",                           "03_visualise",
+    "D. Robustness",     14L, "auc",                               "Honest ceiling: how well can we predict",          "build_slide_auc",                   "tbl_auc_decile.csv;tbl_auc_summary.csv",             "03_visualise",
     # --- E. Placement hours annex ---
     "E. Placement",      15L, "placement_programme_lollipop",      "Placement hours by programme",                     "build_slide_placement_lollipop",    "P1_outcomes_by_programme.csv",                   "p4_placement_slides",
     "E. Placement",      16L, "placement_interaction",             "Hours x real value interaction",                   "build_slide_placement_interaction", "P2_interaction_results.csv",                     "p4_placement_slides",
