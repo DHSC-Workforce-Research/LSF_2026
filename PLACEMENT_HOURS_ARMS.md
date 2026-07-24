@@ -1,5 +1,12 @@
 # Placement hours: two arms and a descriptive
 
+> **Script names changed in the 2026-07-24 RAP refactor.** The design below is
+> unchanged and still correct; only the file layout moved. Everything that was
+> spread across the numbered and lettered scripts now runs as
+> `00_config -> 01_data -> 02_analysis -> 03_deck`, with the analysis functions
+> in `functions/analysis_*.r` and the slides driven by `functions/deck_manifest.r`.
+> The pre-refactor scripts are on branch `backup/dev-2026-07-22`.
+
 Branch: `feat/placement-hours`, cut from `feat/real-lsf-controlled`
 Hours source: **DHSC programme-level average placement hours per year, FY26/27** (excluding adjustments), 24 programme codes, 23 carrying a value.
 

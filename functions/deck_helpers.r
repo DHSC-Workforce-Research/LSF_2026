@@ -1,5 +1,5 @@
 # ===========================================================================
-# deck_helpers.r  -  presentation helpers for 12_build_deck.r
+# deck_helpers.r  -  presentation helpers for scripts/03_deck.r
 #   save_slide()       : ggsave at true 16:9 widescreen (13.33 x 7.5in), high-dpi
 #   theme_dhsc_slide() : larger-font variant of theme_dhsc() for on-screen reading
 #   dhsc_table_plot()  : render a data frame as a DHSC-branded table IMAGE, built
@@ -81,4 +81,83 @@ dhsc_table_plot <- function(df, title = NULL, subtitle = NULL, caption = NULL,
       plot.subtitle = ggplot2::element_text(size = base_size * 1.05, colour = "grey30", family = family),
       plot.caption  = ggplot2::element_text(size = base_size * 0.8,  colour = "grey45", family = family),
       plot.margin   = ggplot2::margin(16, 16, 16, 16))
+}
+# ===========================================================================
+# DECK LAYER (RAP refactor, task 6)
+#
+# 03_deck.r drives everything below off functions/deck_manifest.r. Slide
+# numbers come from the manifest and nowhere else: no plotting code knows or
+# constructs its own filename.
+# ===========================================================================
+
+# where the presented deck is written
+deck_dir <- function() {
+  d <- file.path(outputs_dir(), "deck")
+  if (!dir.exists(d)) dir.create(d, recursive = TRUE)
+  d
+}
+
+# the ONLY place a slide filename is constructed. number and slug come from the
+# manifest row, so reordering the manifest renumbers the files and nothing else
+# has to change.
+slide_file <- function(number, slug) {
+  file.path(deck_dir(), sprintf("slide_%02d_%s.png", as.integer(number), slug))
+}
+
+# resolve a manifest source_tables entry to a path and read it.
+#   "reference/cpi_index.csv"  -> the committed reference file in the repo
+#   anything else              -> newest match anywhere under the outputs or
+#                                 derived areas, same rule as tests/check_numbers.r,
+#                                 so a table living in a dated pack folder is
+#                                 found without the deck knowing where it landed.
+deck_table <- function(name) {
+  if (grepl("^reference/", name)) {
+    p <- name
+    if (!file.exists(p)) stop("deck: missing reference file ", p, call. = FALSE)
+    return(read_csv(p, show_col_types = FALSE, progress = FALSE))
+  }
+  roots <- unique(c(outputs_dir(), derived_dir()))
+  hits <- character(0)
+  for (r in roots) {
+    if (dir.exists(r))
+      hits <- c(hits, list.files(r, pattern = paste0("^", name, "$"),
+                                 recursive = TRUE, full.names = TRUE))
+  }
+  if (!length(hits))
+    stop("deck: could not find ", name, " under the outputs or derived areas. ",
+         "Run 02_analysis.r first.", call. = FALSE)
+  newest <- hits[order(file.info(hits)$mtime, decreasing = TRUE)][1]
+  read_csv(newest, show_col_types = FALSE, progress = FALSE)
+}
+
+# a manifest row's source_tables is a ";"-separated list; return them as a
+# named list of data frames, keyed by filename.
+deck_tables <- function(source_tables) {
+  names_v <- trimws(strsplit(source_tables, ";", fixed = TRUE)[[1]])
+  names_v <- names_v[nzchar(names_v)]
+  stats::setNames(lapply(names_v, deck_table), names_v)
+}
+
+# ---- slide finding text ----------------------------------------------------
+# Titles, subtitles and the AUC box are FINDINGS, so they live with the data in
+# slide_labels.json in the secure derived folder, never in the repo. Missing
+# file means slides render without titles rather than failing. Read once per
+# session and cached (03_visualise.r built the same closure per run).
+deck_labels <- local({
+  L <- NULL
+  function() {
+    if (is.null(L)) {
+      path <- file.path(derived_dir(), "slide_labels.json")
+      L <<- if (requireNamespace("jsonlite", quietly = TRUE) && file.exists(path))
+              jsonlite::fromJSON(path) else list()
+      if (!length(L))
+        message("NOTE: slide_labels.json not found or unreadable; slides render without titles.")
+    }
+    L
+  }
+})
+
+lbl <- function(slide, field, default = "") {
+  v <- tryCatch(deck_labels()[[slide]][[field]], error = function(e) NULL)
+  if (is.null(v) || length(v) == 0 || (length(v) == 1 && is.na(v))) default else v
 }
