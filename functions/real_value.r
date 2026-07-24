@@ -101,7 +101,7 @@ PROVIDER_ALIASES <- c(
 # "university"/"college" (removing them collides distinct HEIs, e.g. UCL).
 rv_norm <- function(x) {
   x <- tolower(as.character(x))
-  x <- gsub("['’`]", "", x)          # delete straight + curly apostrophes
+  x <- gsub("['\u2019`]", "", x)          # delete straight + curly apostrophes
   x <- gsub("&", " and ", x)
   x <- gsub("\\bthe\\b", " ", x)          # drop "the"
   x <- gsub("[^a-z0-9]+", " ", x)          # other punctuation -> space

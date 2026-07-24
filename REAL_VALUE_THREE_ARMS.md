@@ -1,5 +1,12 @@
 # Real LSF analysis: three arms
 
+> **Script names changed in the 2026-07-24 RAP refactor.** The design below is
+> unchanged and still correct; only the file layout moved. Everything that was
+> spread across the numbered and lettered scripts now runs as
+> `00_config -> 01_data -> 02_analysis -> 03_deck`, with the analysis functions
+> in `functions/analysis_*.r` and the slides driven by `functions/deck_manifest.r`.
+> The pre-refactor scripts are on branch `backup/dev-2026-07-22`.
+
 Branch: `feat/real-lsf-controlled`  
 Headline construct: **CPIH x local rent (TTWA)** on the student's nominal package  
 (`training £5k + parental £2k + specialist £1k` when flagged).

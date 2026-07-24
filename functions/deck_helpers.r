@@ -1,5 +1,5 @@
 # ===========================================================================
-# deck_helpers.r  -  presentation helpers for 12_build_deck.r
+# deck_helpers.r  -  presentation helpers for scripts/03_deck.r
 #   save_slide()       : ggsave at true 16:9 widescreen (13.33 x 7.5in), high-dpi
 #   theme_dhsc_slide() : larger-font variant of theme_dhsc() for on-screen reading
 #   dhsc_table_plot()  : render a data frame as a DHSC-branded table IMAGE, built

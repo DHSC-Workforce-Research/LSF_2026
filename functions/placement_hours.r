@@ -35,7 +35,7 @@ PH_FAMILIES   <- c("nursing", "dental", "ahp", "other")
 # different programmes and any aggressive normalisation collapses them.
 ph_key <- function(x) {
   x <- tolower(as.character(x))
-  x <- gsub("['’`]", "", x)
+  x <- gsub("['\u2019`]", "", x)
   stringr::str_squish(x)
 }
 
