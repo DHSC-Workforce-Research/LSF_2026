@@ -55,12 +55,14 @@ deck_manifest <- function() {
     "E. Placement",      16L, "placement_interaction",             "Hours x real value interaction",                   "build_slide_placement_interaction", "P2_interaction_results.csv",                     "p4_placement_slides",
     "E. Placement",      17L, "placement_family_fe",               "Placement hours under family FE",                  "build_slide_placement_family_fe",   "P3_family_fe_results.csv",                       "p4_placement_slides",
     # --- F. Equity (funding triangle) annex ---
+    # Source tables verified against what the scripts actually write (2026-07-24):
+    # the two triangle entries were draft guesses and are now the real names.
     # 18 and 19 are the two halves of one cross-tab. If d3's builder can put
     # both groups on one chart without crowding, they collapse to a single
     # slide at task 6 and everything below renumbers.
     "F. Equity",         18L, "confidence_confident",              "Financial confidence: confident group",             "build_slide_confidence_confident",  "financial_confidence_by_band.csv",              "d3_visualise_demographics",
     "F. Equity",         19L, "confidence_unconfident",            "Financial confidence: unconfident group",           "build_slide_confidence_unconfident","financial_confidence_by_band.csv",              "d3_visualise_demographics",
-    "F. Equity",         20L, "triangle_scatter_risk_dependence",  "Triangle: risk vs dependence",                      "build_slide_triangle_risk_dep",     "tbl_triangle_cross_question.csv",                "d7_triangle_cross_question",
-    "F. Equity",         21L, "triangle_rates",                    "Triangle: funding rates by group",                  "build_slide_triangle_rates",        "tbl_funding_triangle_rates.csv",                 "d6_funding_triangle_slides"
+    "F. Equity",         20L, "triangle_scatter_risk_dependence",  "Triangle: risk vs dependence",                      "build_slide_triangle_risk_dep",     "triangle_group_matrix.csv",                "d7_triangle_cross_question",
+    "F. Equity",         21L, "triangle_rates",                    "Triangle: funding rates by group",                  "build_slide_triangle_rates",        "funding_triangle_rates.csv",                 "d6_funding_triangle_slides"
   )
 }
