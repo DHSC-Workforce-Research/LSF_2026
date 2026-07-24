@@ -37,7 +37,7 @@ analysis_placement_interaction <- function() {
 
   # real value first, hours second: attach_placement_hours() carries the match
   # report as an attribute and a later join would drop it.
-  stud <- build_real_value(SAMPLE, ref, awards, cpih, base_year = 2020)
+  stud <- rv_entry_sample(ref, awards, cpih, .label = "p2 interaction (entry)")
   stud <- attach_placement_hours(as.data.frame(stud), dir = REF_DIR)
 
   cat_both("")
@@ -255,7 +255,8 @@ analysis_placement_interaction <- function() {
 
     wave_rv <- build_real_value(as.data.frame(wave_samp), ref, awards, cpih,
                                 base_year = 2020, provider_col = "college",
-                                year_col = "entry_year", parent_col = NA_character_) |>
+                                year_col = "entry_year", parent_col = NA_character_,
+                                .label = "p2 wave hazard") |>
       transmute(UniqueID, year, rv_gbp_wave = as.numeric(.data[[PRIMARY]]))
 
     panel <- long |>

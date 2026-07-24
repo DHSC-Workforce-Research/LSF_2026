@@ -71,7 +71,7 @@ analysis_real_value <- function() {
 
   progress(paste0("05: building real-value measures (parent flag = ", RV_PARENT, ") ..."))
   t0 <- Sys.time()
-  samp <- build_real_value(SAMPLE, ref, awards, cpih, base_year = 2020)
+  samp <- rv_entry_sample(ref, awards, cpih, .label = "05 spec ladder (entry)")
 
   # --- type coercion (this is what usually kills fixest with cryptic c() errors) -
   # Prefer the analysis-sample parental/specialist flags; fall back to has_parent.

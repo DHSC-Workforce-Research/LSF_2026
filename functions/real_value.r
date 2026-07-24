@@ -130,10 +130,91 @@ match_providers <- function(sample, ref, provider_col = RV_PROVIDER) {
 # Nominal package (England LSF schedule, non-means-tested core components):
 #   training_grant £5,000 (all) + parental_support £2,000 + specialist_subject £1,000
 # as flagged on the sample. Max face value = £8,000 if both top-ups.
+# ---------------------------------------------------------------------------
+# BUILD TRACE (added 2026-07-24, task 10)
+#
+# build_real_value() is the expensive step in this pipeline: it joins the
+# provider register, matches names and computes every real-value measure. It is
+# called from several places, and until now there was no way to see how many
+# times, on what, or at what cost. rv_trace_report() prints one compact table
+# at the end of a run so that is answerable from the console output alone.
+#
+# The trace records nothing sensitive: a label, row counts, the nominal basis
+# and a duration.
+# ---------------------------------------------------------------------------
+.rv_trace <- new.env(parent = emptyenv())
+.rv_trace$log <- list()
+
+rv_trace_reset <- function() {
+  .rv_trace$log <- list()
+  invisible(TRUE)
+}
+
+rv_trace_add <- function(label, rows_in, rows_out, secs, nominal, cached = FALSE) {
+  .rv_trace$log[[length(.rv_trace$log) + 1L]] <- list(
+    label = label, rows_in = rows_in, rows_out = rows_out,
+    secs = secs, nominal = nominal, cached = cached)
+  invisible(TRUE)
+}
+
+rv_trace_report <- function() {
+  L <- .rv_trace$log
+  cat("\n=== REAL-VALUE BUILD TRACE ===\n")
+  if (!length(L)) { cat("  no build_real_value() calls recorded.\n"); return(invisible(NULL)) }
+  cat(sprintf("  %-34s %10s %10s %8s  %-18s %s\n",
+              "caller", "rows in", "rows out", "secs", "nominal basis", "source"))
+  cat("  ", strrep("-", 96), "\n", sep = "")
+  built <- 0L; cached <- 0L; total <- 0
+  for (e in L) {
+    cat(sprintf("  %-34s %10s %10s %8.1f  %-18s %s\n",
+                substr(e$label, 1, 34),
+                format(e$rows_in, big.mark = ","), format(e$rows_out, big.mark = ","),
+                e$secs, e$nominal, if (isTRUE(e$cached)) "CACHED" else "built"))
+    if (isTRUE(e$cached)) cached <- cached + 1L else { built <- built + 1L; total <- total + e$secs }
+  }
+  cat("  ", strrep("-", 96), "\n", sep = "")
+  cat(sprintf("  %d build(s), %d cache hit(s); %.1f seconds spent building.\n",
+              built, cached, total))
+  invisible(NULL)
+}
+
+# ---------------------------------------------------------------------------
+# rv_entry_sample()  -  the ENTRY-level real-value sample, built once.
+#
+# 01_data.r builds this and saves it. Before task 10, five separate places then
+# rebuilt the identical thing from scratch and ignored the saved copy. They now
+# read it. If the file is absent (someone ran 02 without 01) it falls back to
+# building, so nothing breaks; the trace shows which happened.
+#
+# This is the ENTRY-level measure only: one row per student, real value at
+# course entry, on the full nominal package. The WAVE-level measures are a
+# different construct and are NOT interchangeable with this - see the note in
+# functions/analysis_findings_pack.r.
+# ---------------------------------------------------------------------------
+rv_entry_sample <- function(ref, awards, cpih, .label = "entry") {
+  cached <- file.path(derived_dir(), "lsf_real_value_sample.rds")
+  if (file.exists(cached)) {
+    t0  <- Sys.time()
+    out <- as.data.frame(readRDS(cached))
+    rv_trace_add(.label, nrow(out), nrow(out),
+                 as.numeric(Sys.time() - t0, units = "secs"),
+                 "full package", cached = TRUE)
+    return(out)
+  }
+  message("rv_entry_sample: no cached build found; rebuilding (run 01_data.r to avoid this).")
+  SAMPLE <- as.data.frame(readRDS(file.path(derived_dir(), "lsf_analysis_sample.rds")))
+  build_real_value(SAMPLE, ref, awards, cpih, base_year = BASE_YEAR,
+                   .label = paste0(.label, " (rebuilt)"))
+}
+
 build_real_value <- function(sample, ref, awards, cpih, base_year = 2020,
                              provider_col = RV_PROVIDER, year_col = RV_YEAR,
                              parent_col = RV_PARENT,
-                             specialist_col = RV_SPECIALIST) {
+                             specialist_col = RV_SPECIALIST,
+                             .label = "unlabelled") {
+  .rv_t0 <- Sys.time()
+  .rv_rows_in <- nrow(sample)
+  .rv_nominal <- if (is.na(parent_col) || is.null(parent_col)) "core grant only" else "full package"
   training   <- awards$amount[awards$component == "training_grant"][1]
   parental   <- awards$amount[awards$component == "parental_support"][1]
   specialist <- awards$amount[awards$component == "specialist_subject"][1]
@@ -219,5 +300,8 @@ build_real_value <- function(sample, ref, awards, cpih, base_year = 2020,
   if (!has_specialist_available)
     message("build_real_value: specialist flag '", specialist_col,
             "' not found; specialist top-up set to 0.")
-  dplyr::select(m, -.yr)
+  out <- dplyr::select(m, -.yr)
+  rv_trace_add(.label, .rv_rows_in, nrow(out),
+               as.numeric(Sys.time() - .rv_t0, units = "secs"), .rv_nominal)
+  out
 }
