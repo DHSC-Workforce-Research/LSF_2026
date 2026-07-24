@@ -42,7 +42,7 @@ deck_manifest <- function() {
     "B. Retention",       6L, "intention",                         "Considered-leaving intention",                     "build_slide_intention",             "tbl_dynamics_intention.csv",                     "03_visualise",
     "B. Retention",       7L, "factors",                           "What drives leaving",                              "build_slide_factors",               "tbl_factors.csv",                                "03_visualise",
     # --- C. The finding: the three arms ---
-    "C. Finding",         8L, "rv_leave_curve",                    "Arm 1: leaving falls as real value rises",         "build_slide_rv_leave_curve",        "tbl_rv_pred_curves.csv",                         "07_real_value_comms",
+    "C. Finding",         8L, "rv_leave_curve",                    "Arm 1: leaving falls as real value rises",         "build_slide_rv_leave_curve",        "tbl_rv_pred_curves.csv;tbl_rv_pp_per_1k.csv",    "07_real_value_comms",
     "C. Finding",         9L, "rv_hazard_leave_next",              "Arm 2: real value and leaving next year",          "build_slide_rv_hazard_leave_next",  "tbl_hazard_pred_curves.csv;tbl_hazard_1k.csv",   "08_hazard_and_recruitment",
     "C. Finding",        10L, "rv_three_arms",                     "Three arms summary",                               "build_slide_rv_three_arms",         "tbl_rv_spec_ladder.csv;tbl_hazard_1k.csv;tbl_recruit_fe_results.csv", "08_hazard_and_recruitment",
     "C. Finding",        11L, "rv_recruit_effect",                 "Arm 3: no recruitment signal within providers",    "build_slide_rv_recruit_effect",     "tbl_recruit_fe_results.csv",                     "05e_recruit_effect_slide",
