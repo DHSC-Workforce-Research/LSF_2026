@@ -28,7 +28,7 @@
 analysis_panel <- function() {
   set.seed(1)
   samp <- as.data.frame(readRDS(file.path(derived_dir(), "lsf_analysis_sample.rds")))
-  out  <- outputs_dir()
+  out  <- tables_dir()
   progress("loaded analysis sample: ", nrow(samp), " students")
   samp <- samp |> mutate(crit_course = funding_imp_crse >= 4, crit_uni = funding_imp_uni >= 4)
 

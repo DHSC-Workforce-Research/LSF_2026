@@ -29,7 +29,7 @@
 # ===========================================================================
 
 analysis_framing <- function() {
-  out <- outputs_dir()
+  out <- tables_dir()
   CORE <- as.integer(CORE_GRANT)
 
   gbp <- function(z) paste0("£", format(round(z), big.mark = ",", trim = TRUE))

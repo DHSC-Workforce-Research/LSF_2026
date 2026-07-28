@@ -23,8 +23,7 @@ analysis_placement_family_fe <- function() {
   )
   # ---------------------------------------------------------------------------
 
-  stamp <- format(Sys.Date(), "%Y%m%d")
-  pack  <- file.path(outputs_dir(), paste0("placement_hours_pack_", stamp))
+  pack  <- placement_pack_dir()
   dir.create(pack, showWarnings = FALSE, recursive = TRUE)
   numbers_file <- file.path(pack, "placement_numbers.txt")
   cat_both <- function(...) {
