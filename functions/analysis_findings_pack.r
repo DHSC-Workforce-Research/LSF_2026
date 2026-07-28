@@ -26,8 +26,7 @@ analysis_findings_pack <- function() {
   
   # ---- CONFIG (constants live in scripts/00_config.r) ------------------------
 
-  stamp <- format(Sys.Date(), "%Y%m%d")
-  pack  <- file.path(outputs_dir(), paste0("findings_pack_", stamp))
+  pack  <- findings_pack_dir()
   dir.create(pack, showWarnings = FALSE, recursive = TRUE)
 
   cat_both <- function(...) {
@@ -254,7 +253,7 @@ analysis_findings_pack <- function() {
   for (f in c("tbl_rv_spec_ladder.csv", "tbl_rv_joint_terms.csv",
               "tbl_rv_interactions.csv", "tbl_rv_auc.csv",
               "tbl_rv_measure_sensitivity.csv")) {
-    src <- file.path(outputs_dir(), f)
+    src <- file.path(tables_dir(), f)
     if (file.exists(src)) file.copy(src, file.path(pack, f), overwrite = TRUE)
   }
 

@@ -46,3 +46,25 @@ panel_files <- function() {
     list.files(pattern = "Yearly Comparison.*\\.xlsx$", full.names = TRUE) |>
     sort()
 }
+
+# ---------------------------------------------------------------------------
+# Output sub-areas (task 11, 2026-07-28). Everything the analysis writes goes
+# into a named subfolder of outputs_dir(), so the root holds folders, not a
+# heap of loose files. The harness and the deck both find tables by recursive
+# search under outputs_dir(), so nothing downstream depends on WHICH subfolder
+# a table lands in; these just decide where writes go.
+#
+#   tables_dir()         the standalone analysis tables (02's panel + real value
+#                        + framing) that used to sit loose in the root
+#   findings_pack_dir()  the emailable numbers pack; a FIXED name, overwritten
+#                        each run, so it stops accumulating one dated copy per run
+#   placement_pack_dir() the placement-hours pack; likewise fixed and overwritten
+# ---------------------------------------------------------------------------
+.out_sub <- function(name) {
+  p <- file.path(outputs_dir(), name)
+  if (!dir.exists(p)) dir.create(p, recursive = TRUE)
+  p
+}
+tables_dir         <- function() .out_sub("tables")
+findings_pack_dir  <- function() .out_sub("findings_pack")
+placement_pack_dir <- function() .out_sub("placement_hours")
