@@ -27,9 +27,9 @@ that external data is refreshed.
                         |
  secure share ---> 01_data.r ---> derived tables (secure)
                                         |
-                                   02_analysis.r ---> tbl_*.csv (outputs)
+                                   02_analysis.r ---> outputs/tables/tbl_*.csv
                                                           |
-                                                     03_deck.r ---> deck/slide_NN_slug.png
+                                                     03_deck.r ---> outputs/deck/slide_NN_slug.png
 ```
 
 ## The three layers, and why they are separate
@@ -100,6 +100,25 @@ reference/   committed inputs from ONS / Land Registry / CPI, plus the course
 tests/       the numbers and ASCII harness
 docs/        plans
 ```
+
+Everything the pipeline writes goes into a named subfolder of the outputs area,
+so its root holds folders, not loose files:
+
+```
+outputs/
+  deck/                        slide_NN_slug.png, plus 00_running_order.txt
+  tables/                      the standalone analysis tables (tbl_*.csv)
+  real_value_comms/            Arm 1 predicted-probability curve tables
+  real_value_hazard_recruit/   Arm 2 / Arm 3 tables
+  findings_pack/               emailable numbers pack, overwritten each run
+  placement_hours/             placement-hours pack, overwritten each run
+```
+
+The paths come from `functions/paths.r` (`tables_dir()`, `findings_pack_dir()`,
+`placement_pack_dir()`, `deck_dir()`); nothing writes to the outputs root. Both
+the harness and the deck locate tables by recursive search, so which subfolder
+a table sits in does not matter to any reader. The two packs use fixed names and
+are overwritten each run, so they do not accumulate one dated copy per run.
 
 `functions/codebook.r` is documentation rather than pipeline code: it holds the
 verbatim survey question wording behind every variable and the raw-to-analysis

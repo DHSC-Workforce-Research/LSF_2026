@@ -54,7 +54,7 @@ analysis_real_value <- function() {
   }
 
   # ---------------------------------------------------------------------------
-  out <- outputs_dir()
+  out <- tables_dir()
   progress(paste0("05: loading analysis sample ..."))
   SAMPLE <- as.data.frame(readRDS(file.path(derived_dir(), "lsf_analysis_sample.rds")))
 

@@ -29,8 +29,7 @@ analysis_placement_descriptives <- function() {
   )
   # ---------------------------------------------------------------------------
 
-  stamp <- format(Sys.Date(), "%Y%m%d")
-  pack  <- file.path(outputs_dir(), paste0("placement_hours_pack_", stamp))
+  pack  <- placement_pack_dir()
   dir.create(pack, showWarnings = FALSE, recursive = TRUE)
 
   numbers_file <- file.path(pack, "placement_numbers.txt")
@@ -208,8 +207,7 @@ analysis_placement_descriptives <- function() {
   progress("p1: done -> ", pack)
 
   # ---- p1b: per-programme leaving rate + hours ------------------------------
-  stamp <- format(Sys.Date(), "%Y%m%d")
-  pack  <- file.path(outputs_dir(), paste0("placement_hours_pack_", stamp))
+  pack  <- placement_pack_dir()
   dir.create(pack, showWarnings = FALSE, recursive = TRUE)
 
   progress("p1b: per-programme leaving rate + hours ...")
