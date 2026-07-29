@@ -23,9 +23,9 @@ ideas <- list(
   list(n="3", col="#801650",
        head="More money is linked to staying, but the effect is small and not causal",
        bul=c(
-         paste0(GBP, "1,000 less real grant: 6 to 8% more likely to leave, and to leave the next year. Robust to course and cohort"),
+         paste0(GBP, "1,000 less real grant: 6 to 8% more likely to leave, now and next year. Robust to controls"),
          "Dependence on the grant predicts leaving; awareness does not",
-         "Everyone is funded, so no proof of cause. No answer predicts who leaves: a full model scores 56%, near chance",
+         "Everyone is funded, so no proof of cause. No model predicts who leaves (scores 56%, near chance)",
          "No link between an area's grant value and how many students it recruits")),
   list(n="4", col="#F46A25",
        head="Leaving is steady and broad, and some groups feel the strain more",
@@ -49,14 +49,15 @@ columns <- list(
 )
 
 rects <- data.frame(); pts <- data.frame(); txt <- data.frame()
-WRAP   <- 52          # wrap width in characters for bullets
-LH     <- 2.75        # y-units per wrapped text line
-HEAD_H <- 7           # header bar height
-TOP    <- 87          # top of the content area
-IDEA_GAP <- 3.2       # gap between stacked ideas
-BUL_GAP  <- 2.1       # gap between bullets
+WRAP   <- 54          # wrap width in characters for bullets
+LH     <- 2.6         # y-units per wrapped text line
+HEAD_H <- 6.6         # header bar height
+TOP    <- 87.5        # top of the content area
+IDEA_GAP <- 3.0       # gap between stacked ideas
+BUL_GAP  <- 1.9       # gap between bullets
+FOOT_TOP <- 12.5      # bottom content must clear this; footer sits below
 
-ROW2 <- 52            # fixed top for the second idea in each column, so headers align
+ROW2 <- 55            # fixed top for the second idea in each column, so headers align
 
 for (col in columns) {
   y <- TOP
@@ -84,10 +85,11 @@ for (col in columns) {
   }
 }
 
-# scope footer
-rects <- rbind(rects, data.frame(xmin=2, xmax=98, ymin=2.5, ymax=9.5, fill="#F2F2F2"))
-txt   <- rbind(txt, data.frame(x=3.4, y=6, label=str_wrap(scope, width=140), col=grey,
-                               size=3.3, face="plain", hjust=0, vjust=0.5, family="Arial"))
+# scope footer: padded grey box with a dark-blue accent bar, text centred
+rects <- rbind(rects, data.frame(xmin=2, xmax=98, ymin=1.5, ymax=10.5, fill="#F2F2F2"))
+rects <- rbind(rects, data.frame(xmin=2, xmax=2.7, ymin=1.5, ymax=10.5, fill="#12436D"))
+txt   <- rbind(txt, data.frame(x=4.2, y=6, label=str_wrap(scope, width=150), col=grey,
+                               size=3.4, face="plain", hjust=0, vjust=0.5, family="Arial"))
 
 # ---- draw ------------------------------------------------------------------
 p <- ggplot() +
