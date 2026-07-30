@@ -492,7 +492,7 @@ build_slide_rv_hazard_leave_next <- function(tables) {
     scale_x_continuous(labels = function(z) format(round(z), big.mark = ","),
                        expand = expansion(mult = c(0.02, 0.04))) +
     labs(
-      title = comms_wrap_title("Thinner real LSF this year, higher chance of leaving next year"),
+      title = comms_wrap_title("A lower real LSF is associated with a higher chance of leaving the following year"),
       subtitle = comms_wrap_sub(paste0(
         "Hazard: among students still expected to have course left, predicted probability that this year ",
         "is their last LSF claim. One exit per spell (not double-counted across earlier years). ",
@@ -530,9 +530,7 @@ build_slide_rv_three_arms <- function(tables) {
     note_df,
     title = comms_wrap_title("We can use the 'real' value of the LSF to understand retention risks", w = 48),
     subtitle = comms_wrap_sub(paste0(
-      "Arm 1 does not use year-2/year-3 real LSF and does not double-count multi-wave students. ",
-      "\nArm 2 asks whether thinner real LSF this year raises the chance of not returning next year. ",
-      "\nArm 3 asks whether places where real LSF fell harder also saw fewer first-year claimants.")),
+      "Arm 1 does not use year-2/year-3 real LSF and does not double-count multi-wave students.  \nArm 2 asks whether lower real LSF this year raises the chance of not returning next year.\nArm 3 asks whether places where real LSF fell harder also saw fewer first-year claimants.")),
     caption = comms_wrapcap(paste0(
       "Source: NHS LSF panel 2020-2026. Real LSF construct: ", PRIMARY_LBL,
       " on nominal package (arms 1-2) or core training grant (arm 3). Associational.")),
