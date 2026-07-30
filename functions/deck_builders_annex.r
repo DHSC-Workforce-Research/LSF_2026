@@ -262,9 +262,9 @@ p4_wrapcap    <- function(x, w = 128) str_wrap(x, width = w)
 # 03_visualise's slide_labels.json but scoped to the placement pack. Kept.
 p4_labels <- function() {
   LAB <- list(
-    s1_title = "Placement hours vary sixfold across programmes; leaving before finishing does not follow",
-    s2_title = "A thinner grant raises leaving on every course, not just long-placement ones",
-    s3_title = "Within a subject, more placement hours send mixed signals (exploratory)",
+    s1_title = "Placement hours are not associated in he main with leaving",
+    s2_title = "A lower grant raises leaving on every course, not just long-placement ones",
+    s3_title = "The effect of more placement hours within a subject is unclear",
     source   = "Source: NHS LSF panel 2020-2026; DHSC programme placement hours, FY26/27."
   )
   hits <- list.files(outputs_dir(), pattern = "^placement_slide_labels[.]json$",

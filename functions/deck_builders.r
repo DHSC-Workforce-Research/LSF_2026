@@ -528,11 +528,11 @@ build_slide_rv_three_arms <- function(tables) {
   )
   dhsc_table_plot(
     note_df,
-    title = comms_wrap_title("Three ways we use real LSF", w = 48),
+    title = comms_wrap_title("We can use the 'real' value of the LSF to understand retention risks", w = 48),
     subtitle = comms_wrap_sub(paste0(
       "Arm 1 does not use year-2/year-3 real LSF and does not double-count multi-wave students. ",
-      "Arm 2 asks whether thinner real LSF this year raises the chance of not returning next year. ",
-      "Arm 3 asks whether places where real LSF fell harder also saw fewer first-year claimants.")),
+      "\nArm 2 asks whether thinner real LSF this year raises the chance of not returning next year. ",
+      "\nArm 3 asks whether places where real LSF fell harder also saw fewer first-year claimants.")),
     caption = comms_wrapcap(paste0(
       "Source: NHS LSF panel 2020-2026. Real LSF construct: ", PRIMARY_LBL,
       " on nominal package (arms 1-2) or core training grant (arm 3). Associational.")),
