@@ -90,18 +90,11 @@ build_slide_rv_erosion <- function(tables) {
     scale_y_continuous(limits = c(0, CORE * 1.05), labels = gbp_axis,
                        expand = expansion(mult = c(0, 0.02))) +
     labs(
-      title = wrap_title(sprintf(
-        "The Learning Support Fund has lost about %d%% of its real value since 2020", loss_pct)),
-      subtitle = wrap_sub(sprintf(
-        paste0("The core training grant has been frozen at %s since 2020. After general inflation ",
-               "(CPI), it is worth about %s in 2020 money by %d, roughly %d%% less. The shaded ",
-               "wedge is purchasing power lost to a frozen cash value."),
-        gbp(CORE), gbp(real_end), end$year, loss_pct)),
+      title    = lbl("rv_erosion", "title", loss_pct = loss_pct),
+      subtitle = lbl("rv_erosion", "subtitle", core = gbp(CORE), real_end = gbp(real_end),
+                     end_year = end$year, loss_pct = loss_pct),
       x = NULL, y = NULL, colour = NULL, linetype = NULL,
-      caption = wrapcap(paste0(
-        "Source: ONS CPI all-items index (D7BT), DHSC analysis. Real value = ", gbp(CORE),
-        " x CPI(2020)/CPI(year). CPI excludes owner-occupier housing; where local rents rose faster ",
-        "than the national basket, the real-value loss for students in high-cost areas is larger."))
+      caption  = lbl("rv_erosion", "caption", core = gbp(CORE))
     ) +
     theme_dhsc_slide(15) +
     theme(legend.position = "top",
@@ -132,16 +125,10 @@ build_slide_rv_place <- function(tables) {
                        expand = expansion(mult = c(0, 0.02))) +
     scale_y_discrete(expand = expansion(add = c(0.6, 1.6))) +
     labs(
-      title = wrap_title("The same grant is worth far less where the cost of living is high"),
-      subtitle = wrap_sub(paste0(
-        "How far the universal ", gbp(CORE), " training grant stretches against LOCAL RENT in ", yr,
-        ", scaled so it is worth the full ", gbp(CORE), " where rents are lowest and less where they are ",
-        "higher. The cheapest and most expensive university areas in the country are shown at the ends.")),
+      title    = lbl("rv_place", "title"),
+      subtitle = lbl("rv_place", "subtitle", core = gbp(CORE), year = yr),
       x = NULL, y = NULL,
-      caption = wrapcap(paste0(
-        "Source: ONS private rents (TTWA), DHSC analysis. ", gbp(CORE), " deflated by local rent only, ",
-        "anchored so the lowest-rent English university area equals face value. Recognisable ",
-        "providers plus the national cheapest and most expensive."))
+      caption  = lbl("rv_place", "caption", core = gbp(CORE))
     ) +
     theme_dhsc_slide(15) +
     theme(panel.grid.major.y = element_blank(),
@@ -166,16 +153,15 @@ build_slide_rv_package <- function(tables) {
                        expand = expansion(mult = c(0, 0.02))) +
     scale_y_discrete(limits = rev) +
     labs(
-      title = wrap_title("On top of the core grant, some students receive more"),
-      subtitle = wrap_sub(paste0(
-        "Every LSF student gets the universal ", gbp(CORE_GRANT), " training grant. Parents and carers add ",
-        gbp(PARENTAL_SUPPORT), "; shortage-specialist subjects add ", gbp(SPECIALIST_SUBJECT),
-        "; some get both, up to ", gbp(CORE_GRANT + PARENTAL_SUPPORT + SPECIALIST_SUBJECT), ". ",
-        "Share of students at each total package (n = ", format(n_tot, big.mark = ","), ").")),
+      title    = lbl("rv_package", "title"),
+      subtitle = lbl("rv_package", "subtitle",
+                     core        = gbp(CORE_GRANT),
+                     parental    = gbp(PARENTAL_SUPPORT),
+                     specialist  = gbp(SPECIALIST_SUBJECT),
+                     package_max = gbp(CORE_GRANT + PARENTAL_SUPPORT + SPECIALIST_SUBJECT),
+                     n_total     = format(n_tot, big.mark = ",")),
       x = NULL, y = NULL,
-      caption = wrapcap(paste0(
-        "Source: NHS LSF analysis sample, DHSC. Non-means-tested core components (training / parental / ",
-        "specialist); hardship and expenditure elements excluded."))
+      caption  = lbl("rv_package", "caption")
     ) +
     theme_dhsc_slide(15) +
     theme(panel.grid.major.y = element_blank(),
@@ -224,7 +210,7 @@ build_slide_retention <- function(tables) {
     scale_colour_manual(values = c("3-year courses" = p$teal, "4-year courses" = p$orange)) +
     labs(title = lbl("retention","title"), subtitle = lbl("retention","subtitle"),
          x = "Year of study", y = "Share of starters still enrolled", colour = NULL,
-         caption = panel_wrapcap(paste("Course length derived from the data. Only cohorts old enough to be observed to their final year are included (3-year: 2021-2023 starts; 4-year: 2021-2022). 2020 pilot excluded.", panel_src()))) +
+         caption = lbl("retention", "caption")) +
     theme_dhsc_slide(base = 15) + capt_theme() + theme(legend.position = "top", panel.grid.major.x = element_blank())
 }
 
@@ -242,7 +228,7 @@ build_slide_retention_courses <- function(tables) {
     scale_y_continuous(limits = c(0, 115), breaks = c(0, 50, 100), labels = \(z) paste0(z, "%")) +
     labs(title = lbl("retention_courses","title"), subtitle = lbl("retention_courses","subtitle"),
          x = "Year of study", y = "Share of starters still enrolled",
-         caption = panel_wrapcap(paste("Observed proportions, not modelled. Only cohorts observed to their final year are included. 2020 pilot excluded.", panel_src()))) +
+         caption = lbl("retention_courses", "caption")) +
     theme_dhsc_slide(base = 13) + capt_theme() + theme(strip.text = element_text(size = 10), panel.grid.major.x = element_blank())
 }
 
@@ -259,7 +245,7 @@ build_slide_intention <- function(tables) {
     scale_x_continuous(limits = c(0, 30), breaks = seq(0, 30, 10), labels = \(z) paste0(z, "%")) +
     labs(title = lbl("intention","title"), subtitle = lbl("intention","subtitle"),
          x = "Share no longer claiming the following year", y = NULL,
-         caption = panel_wrapcap(paste("Counted only where the student had course left and a full next year of data existed.", panel_src()))) +
+         caption = lbl("intention", "caption")) +
     theme_dhsc_slide(base = 15) + capt_theme() + theme(panel.grid.major.y = element_blank())
 }
 
@@ -277,7 +263,7 @@ build_slide_factors <- function(tables) {
     scale_colour_manual(values = c("More likely to leave" = p$risk, "Less likely to leave" = p$teal)) +
     labs(title = lbl("factors","title"), subtitle = lbl("factors","subtitle"),
          x = "Odds of leaving before finishing (1.0 = no difference)", y = NULL, colour = NULL,
-         caption = panel_wrapcap(paste("Single-factor logistic models, course and cohort fixed effects.", panel_src()))) +
+         caption = lbl("factors", "caption")) +
     theme_dhsc_slide(base = 15) + capt_theme() + theme(legend.position = "top")
 }
 
@@ -296,7 +282,7 @@ build_slide_survivorship <- function(tables) {
                                    "Year 2 + financial confidence" = p$blue)) +
     labs(title = lbl("survivorship","title"), subtitle = lbl("survivorship","subtitle"),
          x = "Odds ratio (1.0 = no difference)", y = NULL, colour = NULL,
-         caption = panel_wrapcap(paste("Logistic models, course and cohort fixed effects.", panel_src()))) +
+         caption = lbl("survivorship", "caption")) +
     theme_dhsc_slide(base = 15) + capt_theme() + theme(legend.position = "top")
 }
 
@@ -318,7 +304,7 @@ build_slide_auc <- function(tables) {
     labs(title = lbl("auc","title"), subtitle = lbl("auc","subtitle"),
          x = "Students ranked by the model's predicted risk of leaving (lowest to highest)",
          y = "Share who left before finishing",
-         caption = panel_wrapcap(paste("Logistic model of the five entry funding items.", panel_src()))) +
+         caption = lbl("auc", "caption")) +
     theme_dhsc_slide(base = 15) + capt_theme() +
     theme(panel.grid.major.x = element_blank(), plot.margin = margin(16, 22, 12, 12))
   box_txt <- lbl("auc","box")
@@ -391,26 +377,19 @@ theme_comms <- function(base = 14, legend_box = TRUE) {
 # statement was still printing under the Arm 1 curve while the axis label on the
 # same slide said "Weighted CoL rent+CPI". Now derived from HOUSING_WEIGHT so it
 # cannot drift from the measure again.
-comms_src <- function() sprintf(paste0(
-  "Source: NHS LSF panel 2020-2026, DHSC analysis. Real LSF = nominal package deflated by a weighted ",
-  "cost-of-living index (%.0f%% local rent TTWA, %.0f%% CPI). ",
-  "Predicted probabilities for a typical student profile. Associational, not causal."),
-  100 * HOUSING_WEIGHT, 100 * (1 - HOUSING_WEIGHT))
+comms_src <- function() lbl_raw(
+  "rv_leave_curve", "caption",
+  w_rent = sprintf("%.0f", 100 * HOUSING_WEIGHT),
+  w_cpi  = sprintf("%.0f", 100 * (1 - HOUSING_WEIGHT)))
 
-caption_y_zoom_curves <- function(y_lo) {
-  base <- comms_wrapcap(comms_src())
+zoom_note <- function(base, y_lo) {
   if (!is.na(y_lo) && y_lo > 0.005)
-    paste0(base, "\nNote: y-axis does not start at 0% (scale zoomed to show the gradient).")
+    paste0(base, "\n", deck_text_common()$note_zoom)
   else base
 }
-caption_y_zoom_hazard <- function(y_lo, extra = "") {
-  base <- comms_wrapcap(paste0(
-    "Source: NHS LSF panel 2020-2026, DHSC analysis. Real LSF = ", PRIMARY_LBL, ". ",
-    "Associational, not causal. ", extra))
-  if (!is.na(y_lo) && y_lo > 0.005)
-    paste0(base, "\nNote: y-axis does not start at 0% (scale zoomed to show the gradient).")
-  else base
-}
+caption_y_zoom_curves <- function(y_lo) zoom_note(comms_wrapcap(comms_src()), y_lo)
+caption_y_zoom_hazard <- function(y_lo)
+  zoom_note(lbl("rv_hazard_leave_next", "caption", measure = PRIMARY_LBL), y_lo)
 
 # 07's generic curve plotter, unchanged except that it takes its palette as an
 # argument rather than closing over script-level colour bindings.
@@ -439,7 +418,7 @@ curve_plot <- function(curves, title, subtitle, y_lab, colours = NULL,
                        expand = expansion(mult = c(0.02, 0.04)), breaks = scales_pretty_pct(yl)) +
     scale_x_continuous(labels = function(z) format(round(z), big.mark = ",", scientific = FALSE),
                        expand = expansion(mult = c(0.02, 0.04))) +
-    labs(title = comms_wrap_title(title), subtitle = comms_wrap_sub(subtitle),
+    labs(title = title, subtitle = subtitle,
          x = paste0("Real LSF value (£, ", PRIMARY_LBL, ")"),
          y = comms_wrap_title(y_lab, w = 28), colour = NULL, fill = NULL,
          caption = caption_y_zoom_curves(yl[1])) +
@@ -449,8 +428,9 @@ curve_plot <- function(curves, title, subtitle, y_lab, colours = NULL,
 
   if (!is.null(annotate_pp) && nrow(annotate_pp) > 0) {
     a <- annotate_pp |> dplyr::slice_tail(n = 1)
-    txt <- sprintf("£1,000 lower real LSF\n(around the mean):\nabout %+.1f pp on\npredicted probability\n(%s)",
-                   a$pp_increase_if_1k_less, sub("^S([0-9]).*", "S\\1", a$spec))
+    txt <- lbl_raw("rv_leave_curve", "callout",
+                   pp   = sprintf("%+.1f", a$pp_increase_if_1k_less),
+                   spec = sub("^S([0-9]).*", "S\\1", a$spec))
     g <- g + annotate("label", x = x_max, y = callout_y, hjust = 1, vjust = 1, label = txt,
                       fill = "#F4F4F4", colour = p$ink, size = 3.3, label.size = 0, lineheight = 1.05)
   }
@@ -465,13 +445,9 @@ build_slide_rv_leave_curve <- function(tables) {
   pp     <- tables[["tbl_rv_pp_per_1k.csv"]]   |> filter(outcome == "left_before_finish")
   curve_plot(
     curves,
-    title = "As real LSF at entry falls, predicted leaving rises",
-    subtitle = paste0(
-      "ARM 1 (main retention): one observation per student. Real LSF is measured at course entry only ",
-      "(not year 2/3 while still enrolled). Outcome = left before finishing (once). ",
-      "S0 = real LSF only; S1 = course + entry-year FE; S2 = + funding survey answers. ",
-      "Ribbon = 95% CI for a typical student. Not individual prediction."),
-    y_lab = "Predicted probability of leaving before finishing",
+    title    = lbl("rv_leave_curve", "title"),
+    subtitle = lbl("rv_leave_curve", "subtitle"),
+    y_lab    = lbl_raw("rv_leave_curve", "y_lab"),
     annotate_pp = pp)
 }
 
@@ -492,16 +468,12 @@ build_slide_rv_hazard_leave_next <- function(tables) {
     scale_x_continuous(labels = function(z) format(round(z), big.mark = ","),
                        expand = expansion(mult = c(0.02, 0.04))) +
     labs(
-      title = comms_wrap_title("A lower real LSF is associated with a higher chance of leaving the following year"),
-      subtitle = comms_wrap_sub(paste0(
-        "Hazard: among students still expected to have course left, predicted probability that this year ",
-        "is their last LSF claim. One exit per spell (not double-counted across earlier years). ",
-        "S1 = course and survey-year fixed effects. Ribbon = 95% CI for a typical profile.")),
-      x = paste0("Real LSF value this year (£, ", PRIMARY_LBL, ")"),
-      y = "Predicted probability of leaving by next year",
+      title    = lbl("rv_hazard_leave_next", "title"),
+      subtitle = lbl("rv_hazard_leave_next", "subtitle"),
+      x = lbl_raw("rv_hazard_leave_next", "x_lab", measure = PRIMARY_LBL),
+      y = lbl_raw("rv_hazard_leave_next", "y_lab"),
       colour = NULL, fill = NULL,
-      caption = caption_y_zoom_hazard(yl_h[1],
-        "At-risk sample uses course-length expected finish; exit = last claim year.")) +
+      caption = caption_y_zoom_hazard(yl_h[1])) +
     theme_comms(14, legend_box = FALSE)
 
   if (!is.null(pp_haz) && nrow(pp_haz) > 0) {
@@ -509,7 +481,8 @@ build_slide_rv_hazard_leave_next <- function(tables) {
     if (nrow(a))
       g <- g + annotate("label", x = max(haz_curves$rv_gbp),
                         y = yl_h[1] + 0.9 * (yl_h[2] - yl_h[1]), hjust = 1, vjust = 1,
-                        label = sprintf("£1,000 lower real LSF\n(around the mean):\nabout %+.1f pp on\nleave-next probability\n(S1)", a$pp),
+                        label = lbl_raw("rv_hazard_leave_next", "callout",
+                                        pp = sprintf("%+.1f", a$pp)),
                         fill = "#F4F4F4", colour = p$ink, size = 3.3, label.size = 0, lineheight = 1.05)
   }
   g
@@ -528,12 +501,9 @@ build_slide_rv_three_arms <- function(tables) {
   )
   dhsc_table_plot(
     note_df,
-    title = comms_wrap_title("We can use the 'real' value of the LSF to understand retention risks", w = 48),
-    subtitle = comms_wrap_sub(paste0(
-      "Arm 1 does not use year-2/year-3 real LSF and does not double-count multi-wave students.  \nArm 2 asks whether lower real LSF this year raises the chance of not returning next year.\nArm 3 asks whether places where real LSF fell harder also saw fewer first-year claimants.")),
-    caption = comms_wrapcap(paste0(
-      "Source: NHS LSF panel 2020-2026. Real LSF construct: ", PRIMARY_LBL,
-      " on nominal package (arms 1-2) or core training grant (arm 3). Associational.")),
+    title    = lbl("rv_three_arms", "title"),
+    subtitle = lbl_raw("rv_three_arms", "subtitle"),
+    caption  = lbl("rv_three_arms", "caption", measure = PRIMARY_LBL),
     base_size = 13)
 }
 
@@ -544,9 +514,6 @@ build_slide_rv_three_arms <- function(tables) {
 build_slide_rv_recruit_effect <- function(tables) {
   pal    <- deck_palette()
   orange <- dcol("af_orange", "#F46A25")
-  w_title <- function(x) str_wrap(x, width = 56)
-  w_sub   <- function(x) str_wrap(x, width = 100)
-  w_cap   <- function(x) str_wrap(x, width = 128)
 
   fe    <- tables[["tbl_recruit_fe_results.csv"]]
   cells <- tryCatch(deck_table("tbl_recruit_provider_year.csv"), error = function(e) NULL)
@@ -579,19 +546,13 @@ build_slide_rv_recruit_effect <- function(tables) {
     scale_colour_manual(values = c(`TRUE` = pal$grey, `FALSE` = orange), guide = "none") +
     scale_x_continuous(limits = c(xr[1] - pad, xr[2] + pad), labels = function(z) paste0(z, "%")) +
     labs(
-      title = w_title("Recruitment: no reliable link once you compare like with like"),
-      subtitle = w_sub(paste0(
-        "Estimated change in the number of first-year LSF claimants if a place's real grant value were ",
-        "£1,000 lower. The raw comparison (orange) looks large and negative, but it just reflects big ",
-        "expensive cities vs small cheap towns. Comparing each provider with itself over time, the range ",
-        "crosses zero, so there is no reliable effect.")),
-      x = "Change in first-year claimants per £1,000 lower real LSF  (dot = estimate, bar = 95% CI)",
+      title    = lbl("rv_recruit_effect", "title"),
+      subtitle = lbl("rv_recruit_effect", "subtitle"),
+      x = lbl_raw("rv_recruit_effect", "x_lab"),
       y = NULL,
-      caption = w_cap(paste0(
-        "Source: NHS LSF panel",
-        if (!is.na(n_py)) paste0(", ", format(n_py, big.mark = ","),
-                                 " provider-years across ", n_prov, " providers") else "",
-        ". Grey = 95% range includes zero (no reliable effect); orange = raw, unadjusted (confounded by place)."))
+      caption = lbl("rv_recruit_effect", "caption",
+        cells = if (!is.na(n_py)) paste0(", ", format(n_py, big.mark = ","),
+                                         " provider-years across ", n_prov, " providers") else "")
     ) +
     theme_dhsc_slide(15) +
     theme(panel.grid.major.y = element_blank(),
@@ -601,9 +562,6 @@ build_slide_rv_recruit_effect <- function(tables) {
 # --- 12. spec ladder (05b slide A) -----------------------------------------
 build_slide_rv_spec_ladder <- function(tables) {
   pal  <- deck_palette()
-  wcap <- function(x) str_wrap(x, 130)
-  src  <- paste0("Source: NHS Learning Support Fund panel 2020-2026, DHSC analysis. ",
-                 "Associational models; course and entry-year fixed effects.")
   lad <- tables[["tbl_rv_spec_ladder.csv"]] |>
     filter(outcome_var == "left_before_finish", scale == "per 1 SD",
            spec %in% c("S0", "S1", "S2", "S3")) |>
@@ -620,14 +578,11 @@ build_slide_rv_spec_ladder <- function(tables) {
       "Higher real value -> less leaving" = pal$teal,
       "Higher real value -> more leaving" = pal$risk)) +
     labs(
-      title = "Does real LSF value still predict leaving once we control for survey answers?",
-      subtitle = paste0(
-        "Odds ratio per 1 SD of rent-adjusted (TTWA) real grant value. ",
-        "S0 = real value only; S1 = + funding survey items; S2 = + grant components; ",
-        "S3 = S1 + financial confidence (year-2 survivors)."),
-      x = "Odds ratio of leaving before finishing (1.0 = no association)",
+      title    = lbl("rv_spec_ladder", "title"),
+      subtitle = lbl("rv_spec_ladder", "subtitle", measure = PRIMARY_LBL),
+      x = lbl_raw("rv_spec_ladder", "x_lab"),
       y = NULL, colour = NULL,
-      caption = wcap(src)) +
+      caption = lbl("rv_spec_ladder", "caption")) +
     theme_dhsc_slide(base = 14) +
     theme(legend.position = "top")
 }

@@ -15,11 +15,7 @@
 # ---- d3: financial confidence ---------------------------------------------
 d3_ink <- function() dcol("ink", "#0B0C0C")
 d3_grey <- function() dcol("midgrey", "#6F777B")
-d3_src <- paste(
-  "Source: NHS Learning Support Fund sample demographics (BSA questionnaire",
-  "analysis cross-tabs), DHSC analysis. Shares are within-group; not a model",
-  "of leaving. Financial confidence is asked of continuing (year 2+) students."
-)
+d3_src <- function() deck_text_common()$src_d3
 d3_wrap_title <- function(x, w = 72)  str_wrap(x, width = w)
 d3_wrap_sub   <- function(x, w = 118) str_wrap(x, width = w)
 d3_wrapcap    <- function(x, w = 128) str_wrap(x, width = w)
@@ -96,7 +92,7 @@ d3_plot_confidence_slide <- function(banded_df, band = "Unconfident",
       x = sprintf("Share %s (rated %s)", tolower(band), opts),
       y = NULL,
       fill = NULL,
-      caption = d3_wrapcap(d3_src)
+      caption = d3_wrapcap(d3_src())
     ) +
     theme_dhsc_slide(base = 14) +
     d3_slide_text_theme(title_size = title_size, sub_size = sub_size) +
@@ -130,11 +126,7 @@ TEAL <- "#01A188"; RED <- "#D4351C"; GREY <- "#B1B4B6"
 d6_wrap_title <- function(x, w = 72)  str_wrap(x, width = w)
 d6_wrap_sub   <- function(x, w = 118) str_wrap(x, width = w)
 d6_wrapcap    <- function(x, w = 128) str_wrap(x, width = w)
-d6_src <- paste(
-  "Source: NHS Learning Support Fund demographic cross-tabs (BSA questionnaire",
-  "analysis), DHSC analysis. Within-group shares; denominator is the summed",
-  "response cells. Equity/distributional, not a model of leaving. Non-response",
-  "and 'prefer not to say' excluded; groups under n=10 suppressed.")
+d6_src <- function() deck_text_common()$src_d6
 d6_slide_text_theme <- function(title_size = 20, sub_size = 12.5) {
   theme(
     plot.title    = element_text(size = title_size, face = "bold", colour = d6_ink(),
@@ -176,7 +168,7 @@ d6_plot_equity_facet <- function(d, title, subtitle, above, below, axis,
     facet_wrap(~ demog, scales = "free_y", ncol = ncol) +
     expand_limits(x = max(d$pct, na.rm = TRUE) * 1.14) +
     labs(title = d6_wrap_title(title), subtitle = d6_wrap_sub(subtitle),
-         x = axis, y = NULL, fill = NULL, caption = d6_wrapcap(d6_src)) +
+         x = axis, y = NULL, fill = NULL, caption = d6_wrapcap(d6_src())) +
     theme_dhsc_slide(base = 14) + d6_slide_text_theme() +
     theme(legend.position = "top", panel.grid.major.y = element_blank(),
           strip.text = element_text(face = "bold", hjust = 0, size = 12),
@@ -195,7 +187,7 @@ d6_plot_equity_single <- function(d, title, subtitle, above, below, axis,
     scale_fill_manual(values = d6_statcols(above, below), drop = FALSE) +
     expand_limits(x = max(d$pct, na.rm = TRUE) * 1.16) +
     labs(title = d6_wrap_title(title), subtitle = d6_wrap_sub(subtitle),
-         x = axis, y = NULL, fill = NULL, caption = d6_wrapcap(d6_src)) +
+         x = axis, y = NULL, fill = NULL, caption = d6_wrapcap(d6_src())) +
     theme_dhsc_slide(base = 14) + d6_slide_text_theme() +
     theme(legend.position = "top", panel.grid.major.y = element_blank(),
           axis.text.y = element_text(size = 12))
@@ -218,7 +210,7 @@ d6_plot_rank <- function(d, title, subtitle, above, axis, top_n = 12) {
              label = sprintf("Survey average  %.0f%%", ref), colour = d6_grey(), size = 3.9) +
     scale_x_continuous(limits = c(0, max(d$pct) * 1.24), labels = function(z) paste0(z, "%")) +
     labs(title = d6_wrap_title(title), subtitle = d6_wrap_sub(subtitle),
-         x = axis, y = NULL, caption = d6_wrapcap(d6_src)) +
+         x = axis, y = NULL, caption = d6_wrapcap(d6_src())) +
     theme_dhsc_slide(base = 15) + d6_slide_text_theme(title_size = 20, sub_size = 13) +
     theme(panel.grid.major.y = element_blank())
 }
@@ -231,12 +223,7 @@ d7_grey <- function() dcol("midgrey", "#6F777B")
 d7_wrap_title <- function(x, w = 74)  str_wrap(x, width = w)
 d7_wrap_sub   <- function(x, w = 116) str_wrap(x, width = w)
 d7_wrapcap    <- function(x, w = 128) str_wrap(x, width = w)
-d7_src <- paste(
-  "Source: NHS Learning Support Fund demographic cross-tabs (BSA), DHSC analysis.",
-  "GROUP-LEVEL (ecological) associations, not individual. leave_course and",
-  "confidence are continuing (y2+) items; funding-influence items are first-year,",
-  "so links assume stable group composition across waves. PNTS/non-response",
-  "excluded; groups under n=10 suppressed.")
+d7_src <- function() deck_text_common()$src_d7
 
 d7_slide_text_theme <- function(title_size = 20, sub_size = 12.5) theme(
   plot.title    = element_text(size = title_size, face = "bold", colour = d7_ink(),
@@ -258,23 +245,10 @@ p4_wrap_title <- function(x, w = 56)  str_wrap(x, width = w)
 p4_wrap_sub   <- function(x, w = 100) str_wrap(x, width = w)
 p4_wrapcap    <- function(x, w = 128) str_wrap(x, width = w)
 
-# p4 carried its own label file with built-in defaults, the same pattern as
-# 03_visualise's slide_labels.json but scoped to the placement pack. Kept.
-p4_labels <- function() {
-  LAB <- list(
-    s1_title = "Placement hours are not associated in he main with leaving",
-    s2_title = "A lower grant raises leaving on every course, not just long-placement ones",
-    s3_title = "The effect of more placement hours within a subject is unclear",
-    source   = "Source: NHS LSF panel 2020-2026; DHSC programme placement hours, FY26/27."
-  )
-  hits <- list.files(outputs_dir(), pattern = "^placement_slide_labels[.]json$",
-                     recursive = TRUE, full.names = TRUE)
-  if (length(hits) && requireNamespace("jsonlite", quietly = TRUE)) {
-    user_lab <- tryCatch(jsonlite::read_json(hits[1], simplifyVector = TRUE), error = function(e) NULL)
-    if (!is.null(user_lab)) LAB <- utils::modifyList(LAB, user_lab)
-  }
-  LAB
-}
+# p4 used to carry its own label list plus a stray placement_slide_labels.json
+# found by a recursive search of the outputs tree. Both are gone: placement text
+# is in functions/deck_text.r with every other slide, under the manifest slugs
+# placement_programme_lollipop / _interaction / _family_fe.
 
 
 # ===========================================================================
@@ -285,7 +259,7 @@ band_lvl <- function() c("low", "medium", "high", "unmatched")
 
 # --- 15. placement hours by programme --------------------------------------
 build_slide_placement_lollipop <- function(tables) {
-  pal <- deck_palette(); LAB <- p4_labels()
+  pal <- deck_palette()
   blue <- dcol("af_blue", "#12436D"); orange <- dcol("af_orange", "#F46A25")
   prog <- tables[["P1_outcomes_by_programme.csv"]]
 
@@ -321,16 +295,10 @@ build_slide_placement_lollipop <- function(tables) {
                                    "% left before finishing" = orange), name = NULL) +
     scale_x_continuous(limits = c(-1.5, 1.5), breaks = NULL) +
     coord_cartesian(clip = "off") +
-    labs(title = p4_wrap_title(LAB$s1_title),
-         subtitle = p4_wrap_sub(paste0(
-           "Left (blue): mean placement hours per year by programme, DHSC FY26/27. ",
-           "Right (orange): unadjusted percentage leaving before finishing. Programmes ",
-           "ordered by placement hours. Bar length is scaled within each metric; the tip ",
-           "prints the observed value. If leaving tracked hours the two sides would mirror.")),
+    labs(title    = lbl("placement_programme_lollipop", "title"),
+         subtitle = lbl("placement_programme_lollipop", "subtitle"),
          x = NULL, y = NULL,
-         caption = p4_wrapcap(paste0(
-           LAB$source,
-           " Unadjusted, no controls. Programme cells below n=10 suppressed (no percentage shown)."))) +
+         caption  = lbl("placement_programme_lollipop", "caption")) +
     theme_dhsc_slide(15) +
     theme(legend.position = "bottom",
           panel.grid.major.y = element_blank(),
@@ -339,7 +307,7 @@ build_slide_placement_lollipop <- function(tables) {
 
 # --- 16. hours x real value interaction ------------------------------------
 build_slide_placement_interaction <- function(tables) {
-  pal <- deck_palette(); LAB <- p4_labels()
+  pal <- deck_palette()
   orange <- dcol("af_orange", "#F46A25")
   marg <- tables[["P2_marginal_by_hours.csv"]]
 
@@ -365,19 +333,11 @@ build_slide_placement_interaction <- function(tables) {
     geom_text(aes(label = sprintf("%+.0f%%", pct)), vjust = -1.2, size = 4.2, colour = pal$ink) +
     scale_colour_manual(values = c(`TRUE` = pal$grey, `FALSE` = orange), guide = "none") +
     scale_x_continuous(limits = c(xr[1] - pad, xr[2] + pad), labels = function(z) paste0(z, "%")) +
-    labs(title = p4_wrap_title(LAB$s2_title),
-         subtitle = p4_wrap_sub(paste0(
-           "Marginal effect from a logistic model of leaving-before-finishing on ",
-           "(real LSF value x placement hours), with course and entry-year fixed effects. ",
-           "Points: change in odds per £1,000 lower real grant value, evaluated at a ",
-           "short- and a long-placement course. Identified from within-course variation in ",
-           "real value across areas and years.")),
-         x = "Change in odds of leaving per £1,000 lower real LSF  (dot = estimate, bar = 95% CI)",
+    labs(title    = lbl("placement_interaction", "title"),
+         subtitle = lbl("placement_interaction", "subtitle"),
+         x = lbl_raw("placement_interaction", "x_lab"),
          y = NULL,
-         caption = p4_wrapcap(paste0(
-           LAB$source,
-           " The placement-hours main effect is absorbed by course fixed effects by design",
-           " and is not estimated here. Grey = 95% range includes zero."))) +
+         caption  = lbl("placement_interaction", "caption")) +
     theme_dhsc_slide(15) +
     theme(panel.grid.major.y = element_blank(),
           plot.margin = margin(16, 22, 12, 14))
@@ -407,22 +367,15 @@ build_slide_placement_family_fe <- function(tables) {
     geom_point(size = 5, colour = pal$teal) +
     geom_text(aes(label = sprintf("%.2f%s", OR, flag)), vjust = -1.2, size = 4.2, colour = pal$ink) +
     scale_x_continuous(limits = c(xr[1] - pad, xr[2] + pad)) +
-    labs(title = p4_wrap_title(LAB$s3_title),
-         subtitle = p4_wrap_sub(paste0(
-           "Odds ratio for leaving-before-finishing per 100 additional placement hours ",
-           "per year, logistic model with course-family (not course) fixed effects. ",
-           "Identified from between-course, within-family variation in programme hours. ",
-           "EXPLORATORY: subject differences within a family are uncontrolled, and no ",
-           "demographic covariates exist on this branch.")),
-         x = "Odds ratio per 100 extra placement hours per year (1 = no difference)",
+    labs(title    = lbl("placement_family_fe", "title"),
+         subtitle = lbl("placement_family_fe", "subtitle"),
+         x = lbl_raw("placement_family_fe", "x_lab"),
          y = NULL,
-         caption = p4_wrapcap(paste0(
-           LAB$source,
-           if (nrow(non))
+         caption  = lbl("placement_family_fe", "caption",
+           not_estimated = if (nrow(non))
              paste0(" Not estimated (no identifying variation): ",
                     paste(sprintf("%s - %s", non$lab, non$note), collapse = "; "), ".")
-           else "",
-           " ! = crosswalk-ambiguous. No demographic controls are available on this branch."))) +
+           else "")) +
     theme_dhsc_slide(15) +
     theme(panel.grid.major.y = element_blank(),
           plot.margin = margin(16, 22, 12, 14))
@@ -458,13 +411,9 @@ build_slide_confidence_confident <- function(tables) {
   ctx <- confidence_ctx(tables[["financial_confidence_by_band.csv"]])
   d3_plot_confidence_slide(
     ctx$d_main, band = "Confident",
-    title = "High financial confidence is also uneven across groups",
-    subtitle = paste0(
-      "Share rating 4-5 on covering living expenses next year. ",
-      "Dashed line = n-weighted average of groups on this slide (",
-      sprintf("%.0f%%", ctx$ref_c_main),
-      "). Colour: more than 1 SD from that average (teal = more confident). ",
-      "Ethnicity omitted here for space; see the ethnicity low-confidence slide."),
+    title    = lbl("confidence_confident", "title"),
+    subtitle = lbl("confidence_confident", "subtitle",
+                   ref = sprintf("%.0f%%", ctx$ref_c_main)),
     ncol = 3, value_size = 3.2, title_size = 20, sub_size = 12.5)
 }
 
@@ -473,13 +422,9 @@ build_slide_confidence_unconfident <- function(tables) {
   ctx <- confidence_ctx(tables[["financial_confidence_by_band.csv"]])
   d3_plot_confidence_slide(
     ctx$d_main, band = "Unconfident",
-    title = "Financial confidence is uneven across claimant groups",
-    subtitle = paste0(
-      "Share rating 1-2 on covering living expenses next year. ",
-      "Dashed line = n-weighted average of groups on this slide (",
-      sprintf("%.0f%%", ctx$ref_u_main),
-      "). Colour: more than 1 SD from that average (red = more worried, teal = less). ",
-      "Ethnicity is on the next slide (too many categories to fit here)."),
+    title    = lbl("confidence_unconfident", "title"),
+    subtitle = lbl("confidence_unconfident", "subtitle",
+                   ref = sprintf("%.0f%%", ctx$ref_u_main)),
     ncol = 3, value_size = 3.2, title_size = 20, sub_size = 12.5,
     strip_size = 12, axis_y_size = 11)
 }
@@ -499,12 +444,12 @@ build_slide_triangle_risk_dep <- function(tables) {
     geom_text(aes(label = Group), size = 3, colour = ink, vjust = -0.9, check_overlap = TRUE) +
     scale_size(range = c(2, 9), guide = "none") +
     scale_colour_manual(values = d7_demog_cols, name = NULL) +
-    labs(title = d7_wrap_title("Retention risk vs funding-driven choice, across groups"),
-         subtitle = d7_wrap_sub(sprintf(
-           "Each point a demographic group (size = n). Spearman rho = %.2f across %d groups. Ecological; wave-mismatched (see note).",
-           rho, nrow(d))),
-         x = "Felt may leave course (%)", y = "Funding important to WHERE to study (4-5, %)",
-         caption = d7_wrapcap(d7_src)) +
+    labs(title    = lbl("triangle_scatter_risk_dependence", "title"),
+         subtitle = lbl("triangle_scatter_risk_dependence", "subtitle",
+                        rho = sprintf("%.2f", rho), n_groups = nrow(d)),
+         x = lbl_raw("triangle_scatter_risk_dependence", "x_lab"),
+         y = lbl_raw("triangle_scatter_risk_dependence", "y_lab"),
+         caption = d7_wrapcap(d7_src())) +
     theme_dhsc_slide(14) + d7_slide_text_theme() +
     theme(legend.position = "bottom")
 }
@@ -518,14 +463,13 @@ build_slide_triangle_rates <- function(tables) {
   plot_dat <- rates |> filter(!suppressed, !is_pref) |> filter(question_slug == "leave_course")
   if (!nrow(plot_dat)) stop("no leave_course rows in funding_triangle_rates.csv", call. = FALSE)
   refq <- round(stats::weighted.mean(plot_dat$pct, plot_dat$n), 0)
-  sub_common <- sprintf(
-    "Dashed line = n-weighted average across shown groups (~%d%%). Colour: more than 1 SD from that average (red = above, teal = below). %s lever; equity/distributional, not causal.",
-    refq, str_to_sentence("retention risk"))
+  sub_common <- lbl("triangle_rates", "subtitle", ref = refq)
   sparse <- filter(plot_dat, !demog %in% DENSE)
   # title / axis / status labels taken verbatim from d6's Q tribble and
   # hero_title vector for the leave_course row.
   d6_plot_equity_facet(sparse,
-    "Who feels most at risk of leaving is uneven across claimant groups", sub_common,
-    "More at-risk than average", "Less at-risk than average",
-    "Share who felt they may leave their course (%)")
+    lbl("triangle_rates", "title"), sub_common,
+    lbl_raw("triangle_rates", "lab_above"),
+    lbl_raw("triangle_rates", "lab_below"),
+    lbl_raw("triangle_rates", "x_lab"))
 }

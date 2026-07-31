@@ -7,6 +7,28 @@ written to it. Individual records sit in the secure share and aggregate outputs
 go to the NW025 project area; both paths are built in `functions/paths.r` from
 the Windows user profile, so nothing is hard-coded to one machine.
 
+## Slide text
+
+Every word on every slide is in `functions/deck_text.r`, keyed by the manifest
+slug: title, subtitle, caption, axis labels, callout boxes. The builders in
+`deck_builders*.r` hold geometry and data handling and reach for text through
+`lbl(slug, field, ...)`, which substitutes `{token}` values and wraps at that
+slide's width. Wrap widths differ by slide, on purpose, and are recorded next
+to the text they wrap.
+
+Titles state findings, so the findings-bearing versions are not in this repo.
+`_derived/slide_labels.json` on the secure machine overlays `deck_text.r` key by
+key; supply only the fields to change. See `reference/slide_labels.example.json`.
+A missing overlay is normal: the deck builds with the descriptive titles.
+
+`tests/check_deck_text.r` fails if a manifest slide has no text, a builder is
+missing, a `{token}` never gets substituted, or a literal title creeps back into
+a builder.
+
+This replaced three mechanisms: JSON for six slides, hardcoded strings for
+eleven, and a `placement_slide_labels.json` that was found by a recursive search
+of the outputs tree and silently overrode the placement titles.
+
 ## Run order
 
 ```r

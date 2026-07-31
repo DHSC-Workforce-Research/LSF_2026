@@ -21,6 +21,7 @@
 #   D. Robustness       12-14  spec ladder, survivorship, honest ceiling
 #   E. Placement annex  15-17
 #   F. Equity annex     18-21
+#   G. Technical annex  22-24  geography, real-value construct, model
 #
 # Reordering is one edit here plus a re-run of 03. Anything not in this table
 # is archived on backup/dev-2026-07-22, not lost.
@@ -63,6 +64,12 @@ deck_manifest <- function() {
     "F. Equity",         18L, "confidence_confident",              "Financial confidence: confident group",             "build_slide_confidence_confident",  "financial_confidence_by_band.csv",              "d3_visualise_demographics",
     "F. Equity",         19L, "confidence_unconfident",            "Financial confidence: unconfident group",           "build_slide_confidence_unconfident","financial_confidence_by_band.csv",              "d3_visualise_demographics",
     "F. Equity",         20L, "triangle_scatter_risk_dependence",  "Triangle: risk vs dependence",                      "build_slide_triangle_risk_dep",     "triangle_group_matrix.csv",                "d7_triangle_cross_question",
-    "F. Equity",         21L, "triangle_rates",                    "Triangle: funding rates by group",                  "build_slide_triangle_rates",        "funding_triangle_rates.csv",                 "d6_funding_triangle_slides"
+    "F. Equity",         21L, "triangle_rates",                    "Triangle: funding rates by group",                  "build_slide_triangle_rates",        "funding_triangle_rates.csv",                 "d6_funding_triangle_slides",
+    # --- G. Technical annex: the method, drawn rather than described ---------
+    # These three fit nothing and read nothing. source_tables is empty: the
+    # deck layer passes an empty list and the builders ignore it.
+    "G. Technical",      22L, "tech_geography",                    "How provider location becomes a local rent",        "build_slide_tech_geography",        "",                                           "deck_builders_technical",
+    "G. Technical",      23L, "tech_realvalue",                    "How the frozen grant becomes a real value",         "build_slide_tech_realvalue",        "",                                           "deck_builders_technical",
+    "G. Technical",      24L, "tech_model",                        "What the models estimate",                          "build_slide_tech_model",            "",                                           "deck_builders_technical"
   )
 }

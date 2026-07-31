@@ -1,0 +1,23 @@
+{
+  "_README": [
+    "Copy to _derived/slide_labels.json on the secure machine and edit there.",
+    "This file overlays functions/deck_text.r key by key: supply only the fields",
+    "you want to change and the rest of that slide's text and wrap widths stay",
+    "as written in the repo. Keys are manifest slugs; an unknown key is reported",
+    "and ignored. Braces such as {auc} are filled by the builder at draw time.",
+    "It lives outside the repo because titles state findings."
+  ],
+  "retention": {
+    "title": "<the finding this slide shows>",
+    "subtitle": "<the measure, in one sentence>"
+  },
+  "retention_courses": { "title": "", "subtitle": "" },
+  "intention":         { "title": "", "subtitle": "" },
+  "factors":           { "title": "", "subtitle": "" },
+  "survivorship":      { "title": "", "subtitle": "" },
+  "auc": {
+    "title": "",
+    "subtitle": "",
+    "box": "Model accuracy {auc}\n(a coin toss scores 0.50,\na perfect model 1.00)"
+  }
+}

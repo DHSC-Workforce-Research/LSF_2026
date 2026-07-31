@@ -138,26 +138,6 @@ deck_tables <- function(source_tables) {
   stats::setNames(lapply(names_v, deck_table), names_v)
 }
 
-# ---- slide finding text ----------------------------------------------------
-# Titles, subtitles and the AUC box are FINDINGS, so they live with the data in
-# slide_labels.json in the secure derived folder, never in the repo. Missing
-# file means slides render without titles rather than failing. Read once per
-# session and cached (03_visualise.r built the same closure per run).
-deck_labels <- local({
-  L <- NULL
-  function() {
-    if (is.null(L)) {
-      path <- file.path(derived_dir(), "slide_labels.json")
-      L <<- if (requireNamespace("jsonlite", quietly = TRUE) && file.exists(path))
-              jsonlite::fromJSON(path) else list()
-      if (!length(L))
-        message("NOTE: slide_labels.json not found or unreadable; slides render without titles.")
-    }
-    L
-  }
-})
-
-lbl <- function(slide, field, default = "") {
-  v <- tryCatch(deck_labels()[[slide]][[field]], error = function(e) NULL)
-  if (is.null(v) || length(v) == 0 || (length(v) == 1 && is.na(v))) default else v
-}
+# ---- slide text ------------------------------------------------------------
+# Titles, subtitles, captions and callouts live in functions/deck_text.r, which
+# also merges the secure overlay. lbl() / lbl_raw() are defined there.
