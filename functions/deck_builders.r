@@ -220,13 +220,17 @@ build_slide_retention_courses <- function(tables) {
   rc <- tables[["tbl_retention_by_course.csv"]]
   ord <- rc |> distinct(course, starters) |> arrange(desc(starters)) |> pull(course)
   rc <- rc |> mutate(course = factor(course, levels = ord))
+  final <- rc |> group_by(course) |> slice_max(study_year, n = 1, with_ties = FALSE) |> ungroup()
   ggplot(rc, aes(study_year, survival_pct)) +
     geom_line(colour = p$teal, linewidth = 1) + geom_point(colour = p$teal, size = 2.4) +
     geom_text(aes(label = sprintf("%.0f%%", survival_pct)), vjust = -0.8, size = 3, colour = p$ink) +
     facet_wrap(~course, ncol = 4) +
     scale_x_continuous(breaks = 1:4, labels = paste0("Y", 1:4)) +
     scale_y_continuous(limits = c(0, 115), breaks = c(0, 50, 100), labels = \(z) paste0(z, "%")) +
-    labs(title = lbl("retention_courses","title"), subtitle = lbl("retention_courses","subtitle"),
+    labs(title = lbl("retention_courses", "title",
+                     lo = sprintf("%.0f", min(final$survival_pct)),
+                     hi = sprintf("%.0f", max(final$survival_pct))),
+         subtitle = lbl("retention_courses", "subtitle"),
          x = "Year of study", y = "Share of starters still enrolled",
          caption = lbl("retention_courses", "caption")) +
     theme_dhsc_slide(base = 13) + capt_theme() + theme(strip.text = element_text(size = 10), panel.grid.major.x = element_blank())
@@ -243,7 +247,9 @@ build_slide_intention <- function(tables) {
     geom_text(aes(label = sprintf("%.0f%%", left_next_pct)), hjust = -0.25, size = 5.5, colour = p$ink) +
     scale_fill_manual(values = c(`FALSE` = p$teal, `TRUE` = p$orange)) +
     scale_x_continuous(limits = c(0, 30), breaks = seq(0, 30, 10), labels = \(z) paste0(z, "%")) +
-    labs(title = lbl("intention","title"), subtitle = lbl("intention","subtitle"),
+    labs(title = lbl("intention", "title"),
+         subtitle = lbl("intention", "subtitle",
+                        n_obs = format(sum(intent$n), big.mark = ",")),
          x = "Share no longer claiming the following year", y = NULL,
          caption = lbl("intention", "caption")) +
     theme_dhsc_slide(base = 15) + capt_theme() + theme(panel.grid.major.y = element_blank())
@@ -301,7 +307,12 @@ build_slide_auc <- function(tables) {
     scale_fill_manual(values = c(`FALSE` = p$teal, `TRUE` = p$orange)) +
     scale_x_continuous(breaks = 1:10, labels = c("Lowest\npredicted\nrisk", 2:9, "Highest\npredicted\nrisk"), expand = expansion(add = .6)) +
     scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, 20), labels = \(z) paste0(z, "%")) +
-    labs(title = lbl("auc","title"), subtitle = lbl("auc","subtitle"),
+    labs(title = lbl("auc", "title"),
+         subtitle = lbl("auc", "subtitle",
+                        top_pct    = sprintf("%.0f", dec$leave_rate[which.max(dec$decile)]),
+                        bottom_pct = sprintf("%.0f", dec$leave_rate[which.min(dec$decile)]),
+                        base_pct   = sprintf("%.0f", base),
+                        gap_pp     = sprintf("%.0f", dec$leave_rate[which.max(dec$decile)] - base)),
          x = "Students ranked by the model's predicted risk of leaving (lowest to highest)",
          y = "Share who left before finishing",
          caption = lbl("auc", "caption")) +

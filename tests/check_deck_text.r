@@ -32,10 +32,12 @@ for (i in seq_len(nrow(man))) {
 # Fields whose braces are filled by the builder at draw time are exempt here;
 # everything else must resolve with no arguments.
 runtime_tokens <- c(
+  retention_courses = "lo|hi",
+  intention = "n_obs",
   rv_erosion = "loss_pct|core|real_end|end_year",
   rv_place = "core|year",
   rv_package = "core|parental|specialist|package_max|n_total",
-  auc = "auc|aucpct",
+  auc = "auc|aucpct|top_pct|bottom_pct|base_pct|gap_pp",
   rv_leave_curve = "pp|spec|w_rent|w_cpi",
   rv_hazard_leave_next = "measure|pp",
   rv_three_arms = "measure",

@@ -19,20 +19,24 @@
 #   substituted automatically wherever {src_panel} and friends appear, so the
 #   provenance sentence is written once.
 #
+#   This file is the only place slide text lives. There is no overlay, no JSON,
+#   no per-pack label list. Change a word here and it changes on the slide.
+#
 # WRAP WIDTHS
 #   Each entry carries its own wrap widths, because the slides came from six
 #   different scripts and wrap at different points. Changing a width here moves
 #   where that slide's title breaks and nothing else.
 #
-# THE SECURE OVERLAY
-#   Titles state findings, and findings do not belong in a public repo before
-#   publication. So the strings below are the descriptive, safe versions, and
-#   _derived/slide_labels.json on the secure machine overlays the ones that
-#   state a result. Same keys, same braces. The overlay is read once per
-#   session; a missing file is normal and silent, and the deck still builds.
+# WHAT IS AND IS NOT IN HERE
+#   Titles state findings, so this file states findings. That is why the repo
+#   is private. No disclosive unit-level anything appears: these are rounded
+#   aggregates over a survey of roughly 290,000 claimants, already cleared for
+#   the deck. Secure data still never enters the repo.
 #
-#   If the repo is made private, delete the overlay and put the real titles
-#   straight in here. Nothing else changes.
+#   Slide text used to live in three places: _derived/slide_labels.json for the
+#   six retention slides, hardcoded strings for eleven others, and a
+#   placement_slide_labels.json that a recursive search of the outputs tree
+#   could pick up silently. All three are gone.
 # ===========================================================================
 
 # ---- shared fragments ------------------------------------------------------
@@ -111,12 +115,10 @@ deck_text_defaults <- function() list(
   ),
 
   # === B. RETENTION ========================================================
-  # Titles here are the descriptive versions. The findings-bearing titles are
-  # overlaid from _derived/slide_labels.json.
 
   retention = list(
     wrap = c(title = 72, subtitle = 118, caption = 135),
-    title = "Retention funnel",
+    title = "One in three students leaves before finishing their course",
     subtitle = "Of every 100 students who start, the share still enrolled at the start of each study year.",
     caption = paste0(
       "Course length derived from the data. Only cohorts old enough to be observed to their final year ",
@@ -125,7 +127,7 @@ deck_text_defaults <- function() list(
 
   retention_courses = list(
     wrap = c(title = 72, subtitle = 118, caption = 135),
-    title = "Retention by course",
+    title = "Completion ranges from {lo}% to {hi}% across the biggest courses",
     subtitle = paste0(
       "Of every 100 students who start each course, the share still enrolled at the start of each study ",
       "year. The eight biggest courses."),
@@ -136,17 +138,17 @@ deck_text_defaults <- function() list(
 
   intention = list(
     wrap = c(title = 72, subtitle = 118, caption = 135),
-    title = "Considered leaving, and what happened next",
+    title = "Saying you might leave is the clearest warning sign, though most still stay",
     subtitle = paste0(
       "Continuing students. Share no longer claiming the following year, by whether they said that year ",
-      "they might have to leave their course."),
+      "they might have to leave their course (n = {n_obs} student-years)."),
     caption = paste0(
       "Counted only where the student had course left and a full next year of data existed. {src_panel}")
   ),
 
   factors = list(
     wrap = c(title = 72, subtitle = 118, caption = 135),
-    title = "What is associated with leaving",
+    title = "Many factors nudge the odds of leaving, but none moves them far",
     subtitle = paste0(
       "Adjusted odds of leaving before finishing for students with each characteristic versus those ",
       "without, holding course and cohort equal. 1.0 = no difference; bars are 95% confidence intervals."),
@@ -155,7 +157,7 @@ deck_text_defaults <- function() list(
 
   survivorship = list(
     wrap = c(title = 72, subtitle = 118, caption = 135),
-    title = "Survivorship and selection",
+    title = "Knowing about the grant beforehand only helps in the first year",
     subtitle = paste0(
       "Odds of leaving before finishing: all students, then only those who reach year 2, then adjusted ",
       "for financial confidence."),
@@ -164,10 +166,11 @@ deck_text_defaults <- function() list(
 
   auc = list(
     wrap = c(title = 72, subtitle = 118, caption = 135),
-    title = "How well the model predicts who leaves",
+    title = "We struggle to predict which individuals leave",
     subtitle = paste0(
-      "Students sorted into ten equal groups by the model's predicted risk, against the overall average ",
-      "leaving rate."),
+      "Students sorted into ten equal groups by the model's predicted risk. Even the highest-risk tenth ",
+      "leave at {top_pct}%, barely {gap_pp} points above the {base_pct}% average, while the lowest-risk ",
+      "tenth still leave at {bottom_pct}%."),
     caption = "Logistic model of the five entry funding items. {src_panel}",
     box = "Model accuracy {auc}\n(a coin toss scores 0.50,\na perfect model 1.00)"
   ),
@@ -407,32 +410,11 @@ deck_text_defaults <- function() list(
 )
 
 # ---- assembly --------------------------------------------------------------
-# Read the secure overlay once per session and merge it over the defaults,
-# entry by entry, so a JSON that supplies only a title keeps the repo's
-# subtitle, caption and wrap widths.
 deck_text <- local({
   TXT <- NULL
   function(refresh = FALSE) {
-    if (!is.null(TXT) && !refresh) return(TXT)
-    out <- deck_text_defaults()
-    path <- tryCatch(file.path(derived_dir(), "slide_labels.json"),
-                     error = function(e) NA_character_)
-    if (!is.na(path) && file.exists(path) &&
-        requireNamespace("jsonlite", quietly = TRUE)) {
-      ov <- tryCatch(jsonlite::fromJSON(path, simplifyVector = TRUE),
-                     error = function(e) NULL)
-      if (is.list(ov) && length(ov)) {
-        unknown <- setdiff(names(ov), names(out))
-        if (length(unknown))
-          message("deck_text: slide_labels.json has ", length(unknown),
-                  " key(s) matching no slide, ignored: ",
-                  paste(unknown, collapse = ", "))
-        for (k in intersect(names(ov), names(out)))
-          out[[k]] <- utils::modifyList(out[[k]], as.list(ov[[k]]))
-      }
-    }
-    TXT <<- out
-    out
+    if (is.null(TXT) || refresh) TXT <<- deck_text_defaults()
+    TXT
   }
 })
 
