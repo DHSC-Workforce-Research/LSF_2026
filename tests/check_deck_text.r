@@ -43,9 +43,12 @@ runtime_tokens <- c(
   rv_spec_ladder = "measure",
   placement_family_fe = "not_estimated",
   confidence_confident = "ref",
+  confidence_confident_ethnicity = "ref",
   confidence_unconfident = "ref",
+  confidence_unconfident_ethnicity = "ref",
   triangle_scatter_risk_dependence = "rho|n_groups",
   triangle_rates = "ref",
+  triangle_rates_ethnicity = "ref",
   tech_realvalue = "w"
 )
 for (slug in names(txt)) {

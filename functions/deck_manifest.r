@@ -20,8 +20,10 @@
 #   C. The finding      8-11   Arms 1-3
 #   D. Robustness       12-14  spec ladder, survivorship, honest ceiling
 #   E. Placement annex  15-17
-#   F. Equity annex     18-21
-#   G. Technical annex  22-24  geography, real-value construct, model
+#   F. Equity annex     18-24  ethnicity gets its own slide beside each
+#                              composite, because it carries too many
+#                              categories to read in a facet grid
+#   G. Technical annex  25-27  geography, real-value construct, model
 #
 # Reordering is one edit here plus a re-run of 03. Anything not in this table
 # is archived on backup/dev-2026-07-22, not lost.
@@ -58,18 +60,21 @@ deck_manifest <- function() {
     # --- F. Equity (funding triangle) annex ---
     # Source tables verified against what the scripts actually write (2026-07-24):
     # the two triangle entries were draft guesses and are now the real names.
-    # 18 and 19 are the two halves of one cross-tab. If d3's builder can put
-    # both groups on one chart without crowding, they collapse to a single
-    # slide at task 6 and everything below renumbers.
+    # 18/20 are the two halves of one cross-tab, each followed by its
+    # ethnicity companion (19/21). Ethnicity is split out for legibility only;
+    # the rates, reference line and colour rule are identical.
     "F. Equity",         18L, "confidence_confident",              "Financial confidence: confident group",             "build_slide_confidence_confident",  "financial_confidence_by_band.csv",              "d3_visualise_demographics",
-    "F. Equity",         19L, "confidence_unconfident",            "Financial confidence: unconfident group",           "build_slide_confidence_unconfident","financial_confidence_by_band.csv",              "d3_visualise_demographics",
-    "F. Equity",         20L, "triangle_scatter_risk_dependence",  "Triangle: risk vs dependence",                      "build_slide_triangle_risk_dep",     "triangle_group_matrix.csv",                "d7_triangle_cross_question",
-    "F. Equity",         21L, "triangle_rates",                    "Triangle: funding rates by group",                  "build_slide_triangle_rates",        "funding_triangle_rates.csv",                 "d6_funding_triangle_slides",
+    "F. Equity",         19L, "confidence_confident_ethnicity",    "Financial confidence: confident, ethnicity",        "build_slide_confidence_confident_ethnicity",  "financial_confidence_by_band.csv",    "d3_visualise_demographics",
+    "F. Equity",         20L, "confidence_unconfident",            "Financial confidence: unconfident group",           "build_slide_confidence_unconfident","financial_confidence_by_band.csv",              "d3_visualise_demographics",
+    "F. Equity",         21L, "confidence_unconfident_ethnicity",  "Financial confidence: unconfident, ethnicity",      "build_slide_confidence_unconfident_ethnicity","financial_confidence_by_band.csv",    "d3_visualise_demographics",
+    "F. Equity",         22L, "triangle_scatter_risk_dependence",  "Triangle: risk vs dependence",                      "build_slide_triangle_risk_dep",     "triangle_group_matrix.csv",                "d7_triangle_cross_question",
+    "F. Equity",         23L, "triangle_rates",                    "Triangle: funding rates by group",                  "build_slide_triangle_rates",        "funding_triangle_rates.csv",                 "d6_funding_triangle_slides",
+    "F. Equity",         24L, "triangle_rates_ethnicity",          "Triangle: funding rates, ethnicity",                "build_slide_triangle_rates_ethnicity","funding_triangle_rates.csv",               "d6_funding_triangle_slides",
     # --- G. Technical annex: the method, drawn rather than described ---------
     # These three fit nothing and read nothing. source_tables is empty: the
     # deck layer passes an empty list and the builders ignore it.
-    "G. Technical",      22L, "tech_geography",                    "How provider location becomes a local rent",        "build_slide_tech_geography",        "",                                           "deck_builders_technical",
-    "G. Technical",      23L, "tech_realvalue",                    "How the frozen grant becomes a real value",         "build_slide_tech_realvalue",        "",                                           "deck_builders_technical",
-    "G. Technical",      24L, "tech_model",                        "What the models estimate",                          "build_slide_tech_model",            "",                                           "deck_builders_technical"
+    "G. Technical",      25L, "tech_geography",                    "How provider location becomes a local rent",        "build_slide_tech_geography",        "",                                           "deck_builders_technical",
+    "G. Technical",      26L, "tech_realvalue",                    "How the frozen grant becomes a real value",         "build_slide_tech_realvalue",        "",                                           "deck_builders_technical",
+    "G. Technical",      27L, "tech_model",                        "What the models estimate",                          "build_slide_tech_model",            "",                                           "deck_builders_technical"
   )
 }

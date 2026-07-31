@@ -298,7 +298,18 @@ deck_text_defaults <- function() list(
       "Share rating 4-5 on covering living expenses next year. ",
       "Dashed line = n-weighted average of groups on this slide ({ref}). ",
       "Colour: more than 1 SD from that average (teal = more confident). ",
-      "Ethnicity omitted here for space; see the ethnicity low-confidence slide."),
+      "Ethnicity is on the next slide (too many categories to fit here)."),
+    caption = "{src_d3}"
+  ),
+
+  confidence_confident_ethnicity = list(
+    wrap = c(title = 72, subtitle = 118, caption = 128),
+    title = "High financial confidence by ethnicity",
+    subtitle = paste0(
+      "Share rating 4-5 on covering living expenses next year, ethnicity only. ",
+      "Dashed line = n-weighted average across ethnicity groups on this slide ({ref}). ",
+      "Colour: more than 1 SD from that average (teal = more confident). ",
+      "Shown separately because ethnicity carries too many categories to read in the facet grid."),
     caption = "{src_d3}"
   ),
 
@@ -310,6 +321,17 @@ deck_text_defaults <- function() list(
       "Dashed line = n-weighted average of groups on this slide ({ref}). ",
       "Colour: more than 1 SD from that average (red = more worried, teal = less). ",
       "Ethnicity is on the next slide (too many categories to fit here)."),
+    caption = "{src_d3}"
+  ),
+
+  confidence_unconfident_ethnicity = list(
+    wrap = c(title = 72, subtitle = 118, caption = 128),
+    title = "Low financial confidence by ethnicity",
+    subtitle = paste0(
+      "Share rating 1-2 on covering living expenses next year, ethnicity only. ",
+      "Dashed line = n-weighted average across ethnicity groups on this slide ({ref}). ",
+      "Colour: more than 1 SD from that average (red = more worried, teal = less). ",
+      "Shown separately because ethnicity carries too many categories to read in the facet grid."),
     caption = "{src_d3}"
   ),
 
@@ -330,6 +352,20 @@ deck_text_defaults <- function() list(
     subtitle = paste0(
       "Dashed line = n-weighted average across shown groups (~{ref}%). Colour: more than 1 SD from that ",
       "average (red = above, teal = below). Retention risk lever; equity/distributional, not causal."),
+    caption = "{src_d6}",
+    x_lab = "Share who felt they may leave their course (%)",
+    lab_above = "More at-risk than average",
+    lab_below = "Less at-risk than average"
+  ),
+
+  triangle_rates_ethnicity = list(
+    wrap = c(title = 72, subtitle = 118, caption = 128),
+    title = "Who feels most at risk of leaving, by ethnicity",
+    subtitle = paste0(
+      "Dashed line = n-weighted average across ethnicity groups on this slide (~{ref}%). ",
+      "Colour: more than 1 SD from that average (red = above, teal = below). Retention risk lever; ",
+      "equity/distributional, not causal. Shown separately because ethnicity carries too many ",
+      "categories to read in the facet grid."),
     caption = "{src_d6}",
     x_lab = "Share who felt they may leave their course (%)",
     lab_above = "More at-risk than average",

@@ -400,10 +400,13 @@ confidence_ctx <- function(banded) {
     is_eth <- grepl("ethnic", d0$Demographic, ignore.case = TRUE)
     d_main <- d0[!is_eth, , drop = FALSE]; d_eth <- d0[is_eth, , drop = FALSE]
   }
+  wm <- function(x, w) if (length(x)) stats::weighted.mean(x, w) else NA_real_
   list(d0 = d0, d_main = d_main, d_eth = d_eth,
-       ref_u_main = stats::weighted.mean(d_main$Unconfident_pct, d_main$n),
-       ref_u_all  = stats::weighted.mean(d0$Unconfident_pct, d0$n),
-       ref_c_main = stats::weighted.mean(d_main$Confident_pct, d_main$n))
+       ref_u_main = wm(d_main$Unconfident_pct, d_main$n),
+       ref_u_all  = wm(d0$Unconfident_pct, d0$n),
+       ref_u_eth  = wm(d_eth$Unconfident_pct, d_eth$n),
+       ref_c_main = wm(d_main$Confident_pct, d_main$n),
+       ref_c_eth  = wm(d_eth$Confident_pct, d_eth$n))
 }
 
 # --- 18. financial confidence, confident group (d3 slide 3) ----------------
@@ -427,6 +430,35 @@ build_slide_confidence_unconfident <- function(tables) {
                    ref = sprintf("%.0f%%", ctx$ref_u_main)),
     ncol = 3, value_size = 3.2, title_size = 20, sub_size = 12.5,
     strip_size = 12, axis_y_size = 11)
+}
+
+# --- ethnicity, high confidence --------------------------------------------
+# Ethnicity is split out of the composite slides because it carries too many
+# categories to read in a facet grid, not because it is a lesser cut. It gets
+# the same treatment on its own, full height.
+build_slide_confidence_confident_ethnicity <- function(tables) {
+  ctx <- confidence_ctx(tables[["financial_confidence_by_band.csv"]])
+  if (!nrow(ctx$d_eth)) stop("no Ethnicity rows in financial_confidence_by_band.csv", call. = FALSE)
+  d3_plot_confidence_slide(
+    ctx$d_eth, band = "Confident",
+    title    = lbl("confidence_confident_ethnicity", "title"),
+    subtitle = lbl("confidence_confident_ethnicity", "subtitle",
+                   ref = sprintf("%.0f%%", ctx$ref_c_eth)),
+    single_panel = TRUE, value_size = 3.6,
+    title_size = 20, sub_size = 12.5, axis_y_size = 12)
+}
+
+# --- ethnicity, low confidence ---------------------------------------------
+build_slide_confidence_unconfident_ethnicity <- function(tables) {
+  ctx <- confidence_ctx(tables[["financial_confidence_by_band.csv"]])
+  if (!nrow(ctx$d_eth)) stop("no Ethnicity rows in financial_confidence_by_band.csv", call. = FALSE)
+  d3_plot_confidence_slide(
+    ctx$d_eth, band = "Unconfident",
+    title    = lbl("confidence_unconfident_ethnicity", "title"),
+    subtitle = lbl("confidence_unconfident_ethnicity", "subtitle",
+                   ref = sprintf("%.0f%%", ctx$ref_u_eth)),
+    single_panel = TRUE, value_size = 3.6,
+    title_size = 20, sub_size = 12.5, axis_y_size = 12)
 }
 
 # --- 20. triangle: risk vs dependence (d7 scatter) -------------------------
@@ -472,4 +504,26 @@ build_slide_triangle_rates <- function(tables) {
     lbl_raw("triangle_rates", "lab_above"),
     lbl_raw("triangle_rates", "lab_below"),
     lbl_raw("triangle_rates", "x_lab"))
+}
+
+# --- ethnicity, who feels most at risk -------------------------------------
+# The companion to the facet slide, which filters Ethnicity and Religion out
+# for legibility. Same rates, same reference line, ethnicity alone.
+build_slide_triangle_rates_ethnicity <- function(tables) {
+  rates <- tables[["funding_triangle_rates.csv"]]
+  plot_dat <- rates |> filter(!suppressed, !is_pref) |> filter(question_slug == "leave_course")
+  if (!nrow(plot_dat)) stop("no leave_course rows in funding_triangle_rates.csv", call. = FALSE)
+  eth <- filter(plot_dat, demog == "Ethnicity")
+  if (!nrow(eth)) stop("no Ethnicity rows for leave_course", call. = FALSE)
+  # d6_plot_equity_single() draws its reference line and colours from the rows
+  # it is given, so the quoted average must be the ethnicity one. The archived
+  # d6 script quoted the all-groups average here and drew the ethnicity line,
+  # which did not match.
+  refq <- round(stats::weighted.mean(eth$pct, eth$n), 0)
+  d6_plot_equity_single(eth,
+    lbl("triangle_rates_ethnicity", "title"),
+    lbl("triangle_rates_ethnicity", "subtitle", ref = refq),
+    lbl_raw("triangle_rates_ethnicity", "lab_above"),
+    lbl_raw("triangle_rates_ethnicity", "lab_below"),
+    lbl_raw("triangle_rates_ethnicity", "x_lab"))
 }
