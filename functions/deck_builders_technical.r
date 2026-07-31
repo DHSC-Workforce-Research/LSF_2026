@@ -180,12 +180,12 @@ build_slide_tech_realvalue <- function(tables = NULL) {
     ggplot2::annotate("segment", x = 26, xend = 74, y = ey + 0.15, yend = ey + 0.15,
                       colour = "#0B0C0C", linewidth = 0.8) +
     ggplot2::annotate("text", x = 27, y = ey - 0.55, hjust = 0,
-                      label = "w × (TTWA rentᵧ ÷ England rent₂₀₂₀)",
+                      label = "w \u00d7 (TTWA rent\u1d67 \u00f7 England rent\u2082\u2080\u2082\u2080)",
                       size = 5.0, colour = TECH_TEAL, fontface = "bold") +
     ggplot2::annotate("text", x = 53.5, y = ey - 0.55, hjust = 0, label = "+",
                       size = 5.0, colour = "#0B0C0C") +
     ggplot2::annotate("text", x = 55.8, y = ey - 0.55, hjust = 0,
-                      label = "(1 − w) × (CPIᵧ ÷ CPI₂₀₂₀)",
+                      label = "(1 \u2212 w) \u00d7 (CPI\u1d67 \u00f7 CPI\u2082\u2080\u2082\u2080)",
                       size = 5.0, colour = TECH_ORANGE, fontface = "bold") +
 
     # ---- three cards, colour-keyed to the equation -------------------------
@@ -249,7 +249,7 @@ build_slide_tech_model <- function(tables = NULL) {
                       colour = "#0B0C0C", label = "=") +
     ggplot2::annotate("text", x = 36, y = ey, hjust = 0, size = 5.0,
                       fontface = "bold", colour = TECH_BLUE,
-                      label = "β × real value") +
+                      label = "\u03b2 \u00d7 real value") +
     ggplot2::annotate("text", x = 50, y = ey, hjust = 0, size = 5.0,
                       fontface = "bold", colour = TECH_TEAL,
                       label = "+  controls") +
@@ -261,7 +261,7 @@ build_slide_tech_model <- function(tables = NULL) {
               paste0("One row per student. Outcome is\n",
                      "leaving before the expected finish\n",
                      "year.\n\n",
-                     "β is reported as an odds ratio, per\n",
+                     "\u03b2 is reported as an odds ratio, per\n",
                      "£1,000 or per 1 SD of real value.")) +
     tech_card(35, 65, 4.25, 8.1, TECH_TEAL, "what is controlled",
               paste0("The five funding survey items, the\n",
