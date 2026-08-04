@@ -131,3 +131,141 @@ build_importance_hazard_slide <- function() {
     theme_dhsc_slide(15) +
     theme(panel.grid.major.y = element_blank())
 }
+
+# ===========================================================================
+# build_importance_y1hazard_slide()  -  same ranked-bar design, reading
+# tbl_importance_y1hazard_shapley.csv / _summary.csv (first-year students,
+# outcome = gone next year). This frame carries the reversal: the entry
+# funding answers outrank specific course for first-year exit.
+# ===========================================================================
+build_importance_y1hazard_slide <- function() {
+  p   <- deck_palette()
+  shp <- deck_table("tbl_importance_y1hazard_shapley.csv")
+  smy <- deck_table("tbl_importance_y1hazard_summary.csv")
+
+  shp <- shp[shp$geography == "region", ]
+  if (!nrow(shp))
+    stop("build_importance_y1hazard_slide: no geography == 'region' rows in ",
+         "tbl_importance_y1hazard_shapley.csv.", call. = FALSE)
+  shp <- shp[order(shp$share_pct), ]
+  shp$block_label <- factor(shp$block_label, levels = unique(shp$block_label))
+
+  smy <- smy[smy$geography == "region", ]
+  if (nrow(smy) != 1L)
+    stop("build_importance_y1hazard_slide: expected exactly one geography == 'region' ",
+         "row in tbl_importance_y1hazard_summary.csv, found ", nrow(smy), ".", call. = FALSE)
+  r2_pct <- round(100 * smy$r2_mcfadden_full[1], 1)
+  n_val  <- format(smy$n[1], big.mark = ",", trim = TRUE)
+
+  ggplot(shp, aes(share_pct, block_label)) +
+    geom_col(fill = p$teal, width = 0.68) +
+    geom_text(aes(label = sprintf("%.0f%%", share_pct)),
+              hjust = -0.25, size = 5, colour = p$ink) +
+    scale_x_continuous(limits = c(0, max(shp$share_pct) * 1.18),
+                       expand = expansion(mult = c(0, 0.02))) +
+    labs(
+      title = wrap_title("In year one, funding dependence outranks course"),
+      subtitle = wrap_sub(sprintf(
+        paste("What students say at entry about depending on the grant is the biggest",
+              "marker of first-year exit. The model explains %s%% of the variation",
+              "(pseudo-R2), n = %s first-year students."), r2_pct, n_val)),
+      x = "Share of explained variation (%)", y = NULL,
+      caption = wrapcap(paste(
+        "Shares are order-independent (Shapley decomposition over predictor blocks).",
+        "Descriptive, not causal."))
+    ) +
+    theme_dhsc_slide(15) +
+    theme(panel.grid.major.y = element_blank())
+}
+
+# ===========================================================================
+# build_importance_triptych_slide()  -  the cross-frame comparison, one panel
+# per frame, SAME block order in every panel so the eye can track a block
+# across frames. This is the slide that shows the finding: the funding
+# answers' share falls across the course (46 -> 29 -> 10) while specific
+# course's share rises (37 -> 47 -> 61). Blocks are harmonised by their
+# `block` key, not their per-frame label, so "survey" (entry frame) and
+# "funding_entry" (the two hazard frames) become one row. An empty row in a
+# panel means that block does not exist in that frame (in-year questions are
+# not asked in year 1; components are folded into the wave real value).
+# Region geography throughout.
+# ===========================================================================
+build_importance_triptych_slide <- function() {
+  p <- deck_palette()
+
+  frames <- list(
+    list(tag = "y1",    shp = "tbl_importance_y1hazard_shapley.csv",
+         smy = "tbl_importance_y1hazard_summary.csv",
+         label = "Year 1: gone next year"),
+    list(tag = "entry", shp = "tbl_importance_shapley.csv",
+         smy = "tbl_importance_summary.csv",
+         label = "At entry: ever leaves"),
+    list(tag = "cont",  shp = "tbl_importance_hazard_shapley.csv",
+         smy = "tbl_importance_hazard_summary.csv",
+         label = "Years 2+: gone next year")
+  )
+
+  # harmonise block keys across frames to one display label each
+  key_label <- c(
+    course        = "Specific course",
+    survey        = "Funding answers (entry)",
+    funding_entry = "Funding answers (entry)",
+    place         = "Region",
+    considered    = "Considered leaving (in-year)",
+    components    = "Grant components",
+    family        = "Course family",
+    cohort        = "Entry cohort",
+    survey_year   = "Survey year",
+    confidence    = "Financial confidence (in-year)",
+    study_year    = "Year of study",
+    real_value    = "Real LSF value"
+  )
+
+  rows <- list(); subs <- character(0)
+  for (f in frames) {
+    shp <- deck_table(f$shp); smy <- deck_table(f$smy)
+    shp <- shp[shp$geography == "region", ]
+    smy <- smy[smy$geography == "region", ]
+    if (!nrow(shp) || nrow(smy) != 1L)
+      stop("build_importance_triptych_slide: region rows missing in ", f$shp, call. = FALSE)
+    miss <- setdiff(unique(shp$block), names(key_label))
+    if (length(miss))
+      stop("build_importance_triptych_slide: unmapped block key(s): ",
+           paste(miss, collapse = ", "), call. = FALSE)
+    shp$label_h <- unname(key_label[shp$block])
+    shp$frame   <- f$label
+    rows[[f$tag]] <- shp[, c("frame", "label_h", "share_pct")]
+    subs <- c(subs, sprintf("%s explains %s%%",
+                            f$label, round(100 * smy$r2_mcfadden_full[1], 1)))
+  }
+  d <- do.call(rbind, rows)
+
+  # one canonical row order for every panel: by best share across frames
+  ord <- tapply(d$share_pct, d$label_h, max)
+  lv  <- names(sort(ord))                       # ascending: biggest ends up top
+  d$label_h <- factor(d$label_h, levels = lv)
+  d$frame   <- factor(d$frame, levels = vapply(frames, function(f) f$label, character(1)))
+
+  ggplot(d, aes(share_pct, label_h)) +
+    geom_col(fill = p$teal, width = 0.68) +
+    geom_text(aes(label = sprintf("%.0f%%", share_pct)),
+              hjust = -0.2, size = 3.6, colour = p$ink) +
+    scale_x_continuous(limits = c(0, max(d$share_pct) * 1.22),
+                       expand = expansion(mult = c(0, 0.02))) +
+    scale_y_discrete(drop = FALSE) +
+    facet_wrap(~frame, nrow = 1) +
+    labs(
+      title = wrap_title("The funding signal lives in year one; course takes over later"),
+      subtitle = wrap_sub(paste0(
+        "Share of explained variation in leaving, by predictor block. ",
+        paste(subs, collapse = "; "), " (pseudo-R2).")),
+      x = "Share of explained variation (%)", y = NULL,
+      caption = wrapcap(paste(
+        "Shares are order-independent (Shapley decomposition over predictor blocks); region geography.",
+        "An empty row means the block does not exist in that frame (in-year questions are not",
+        "asked in year 1; grant components are folded into the wave real value).",
+        "Descriptive, not causal."))
+    ) +
+    theme_dhsc_slide(13) +
+    theme(panel.grid.major.y = element_blank())
+}
