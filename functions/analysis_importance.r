@@ -18,6 +18,18 @@
 #   FRAME here, not a bias to correct for: every row has, by construction,
 #   reached a continuing wave.
 #
+# analysis_importance_y1hazard()  - Y1 HAZARD frame. The third frame,
+#   completing the triptych: entry (Y1 -> ever left), Y1 -> gone next year,
+#   continuing (Y2+ -> gone next year, the HAZARD frame above). Of the
+#   variation in gone-next-year among FIRST-YEAR students, how much is
+#   attributable to each of six predictor blocks: course family, specific
+#   course, entry cohort (calendar year - for a first-year row this IS the
+#   entry cohort), place, this year's real LSF value, and the five entry
+#   funding answers? No confidence / considered-leaving blocks: those survey
+#   questions are not asked in year 1, so first-year rows are never complete-
+#   cased on them. No components block: the wave real value already carries
+#   the full nominal package, same reasoning as the HAZARD frame.
+#
 # METHOD (shared, importance_shapley_engine() below). Fit every subset S of
 # the k blocks with a plain logistic model (fixest::feglm, binomial): the
 # term blocks in S go on the right-hand side, the FE blocks in S are absorbed
@@ -75,28 +87,46 @@
 # subsets that CONTAIN the place block need refitting, because a subset
 # without place does not depend on which geography variable place would have
 # used; the rest are reused from the region cache. 3 * 2^(k-1) model fits in
-# total (192 for the entry frame's k=7, 384 for the hazard frame's k=8),
-# keyed on a canonical subset id so nothing is fit twice.
+# total (192 for the entry frame's k=7, 384 for the hazard frame's k=8, 96
+# for the Y1 hazard frame's k=6), keyed on a canonical subset id so nothing
+# is fit twice.
 #
 # REFACTOR NOTE (2026, addendum task). The subset-fitting + Shapley machinery
 # used to live inline inside analysis_importance() only. It is now
-# importance_shapley_engine(), an internal helper shared by both wrappers.
-# analysis_importance() builds its sample and block definitions exactly as
-# before and hands them to the engine; it is a verbatim refactor and its
-# numbers are unchanged (observed on the work machine: region shares course
-# 47.47, survey 29.35, region 10.71, components 5.29, cohort 2.95, rv 2.53,
-# family 1.69; r2_mcfadden_full 0.0233; n 120,941).
+# importance_shapley_engine(), an internal helper shared by all three
+# wrappers. analysis_importance() builds its sample and block definitions
+# exactly as before and hands them to the engine; it is a verbatim refactor
+# and its numbers are unchanged (observed on the work machine: region shares
+# course 47.47, survey 29.35, region 10.71, components 5.29, cohort 2.95, rv
+# 2.53, family 1.69; r2_mcfadden_full 0.0233; n 120,941). Likewise the
+# hazard frame's numbers are unchanged (region shares course 61.20, survey
+# 11.74, confidence 9.65, considered 8.85, place 3.55, study_year 3.09,
+# survey_year 1.61, real_value 0.30; r2_mcfadden_full 0.0642; n 85,932).
+#
+# REFACTOR NOTE (2026, addendum 2). The hazard frame's panel-building code
+# (reference data, long panel, trajectories, at_risk / left_next / year_of_
+# study, wave-specific real LSF, ttwa_code, entry funding answers) is now
+# importance_build_wave_panel(), a helper shared by analysis_importance_
+# hazard(), analysis_importance_y1hazard() and analysis_leaver_prediction()
+# (functions/analysis_leaver_prediction.r). It also attaches course_family
+# (via the same crosswalk-or-regex path as the entry frame), which analysis_
+# importance_hazard() does not use but the other two callers do; adding that
+# column changes nothing for analysis_importance_hazard() because course_
+# family is not in its need_vars. This is a verbatim extraction - same reads,
+# same joins, same order - so the hazard frame's numbers above are unchanged.
 #
 # Writes to tables_dir():
-#   tbl_importance_shapley.csv          geography, block, block_label,
-#                                        shapley_r2, share_pct, rank (1 =
-#                                        largest share, within geography)
-#   tbl_importance_summary.csv          geography, n, k_blocks, n_fits,
-#                                        dev_null, dev_full,
-#                                        r2_mcfadden_full, r2_tjur_full,
-#                                        auc_full
-#   tbl_importance_hazard_shapley.csv   same schema, hazard frame
-#   tbl_importance_hazard_summary.csv   same schema, hazard frame
+#   tbl_importance_shapley.csv           geography, block, block_label,
+#                                         shapley_r2, share_pct, rank (1 =
+#                                         largest share, within geography)
+#   tbl_importance_summary.csv           geography, n, k_blocks, n_fits,
+#                                         dev_null, dev_full,
+#                                         r2_mcfadden_full, r2_tjur_full,
+#                                         auc_full
+#   tbl_importance_hazard_shapley.csv    same schema, hazard frame
+#   tbl_importance_hazard_summary.csv    same schema, hazard frame
+#   tbl_importance_y1hazard_shapley.csv  same schema, Y1 hazard frame
+#   tbl_importance_y1hazard_summary.csv  same schema, Y1 hazard frame
 # ===========================================================================
 
 # Fallback course_family regex, used ONLY when reference/placement_hours.csv
@@ -483,26 +513,33 @@ analysis_importance <- function() {
 }
 
 # ===========================================================================
-# analysis_importance_hazard()  -  HAZARD frame (k = 8). See file header for
-# the question, the caveats and why course_family and components are dropped.
+# importance_build_wave_panel()  -  shared wave-level panel builder.
 #
-# Frame: rebuilds the student-year hazard panel the same way
-# analysis_hazard_recruitment()'s Arm 2 does (functions/
-# analysis_hazard_recruitment.r): the long panel + trajectory anchors give
-# at_risk and left_next (gone next year), and the wave-specific real LSF is
-# built on the FULL nominal package (parental + specialist top-ups), exactly
-# as Arm 2's wave_rv is. Restricted here to CONTINUING waves where financial
-# confidence was asked (confidence non-missing falls out of the complete-case
-# restriction below, since confidence and leave_course are continuing-wave
-# survey items - see analysis_findings_pack.r). year_of_study is derived as
-# year - course_first_year_wave + 1.
+# Builds the student-year hazard panel the same way analysis_hazard_
+# recruitment()'s Arm 2 does (functions/analysis_hazard_recruitment.r): the
+# long panel + trajectory anchors give at_risk and left_next (gone next
+# year), and the wave-specific real LSF is built on the FULL nominal package
+# (parental + specialist top-ups), exactly as Arm 2's wave_rv is.
+# year_of_study is derived as year - course_first_year_wave + 1. Also
+# attaches ttwa_code, the five entry funding answers (SURVEY_VARS, same
+# coercions as analysis_importance()) and course_family (same crosswalk-or-
+# regex fallback analysis_importance() uses for the entry frame).
+#
+# Returns the WHOLE panel, every wave, unrestricted to any particular frame -
+# each caller applies its own row restriction and complete-case rule:
+#   analysis_importance_hazard()    - continuing waves (confidence asked)
+#   analysis_importance_y1hazard()  - first-year waves only
+#   analysis_leaver_prediction()    - both of the above, as its own frames
+#     (functions/analysis_leaver_prediction.r)
+#
+# This is a verbatim extraction of what used to be the first two-thirds of
+# analysis_importance_hazard() (before this became a shared helper), plus
+# the course_family attach appended at the end; the hazard frame's need_vars
+# does not include course_family, so adding that column changes nothing
+# about analysis_importance_hazard()'s sample or numbers.
 # ===========================================================================
-analysis_importance_hazard <- function() {
-  out <- tables_dir()
-
-  # ---- 1. hazard panel, built the same way analysis_hazard_recruitment()'s
-  # Arm 2 builds it ------------------------------------------------------------
-  progress("importance (hazard): loading reference data and hazard panel ...")
+importance_build_wave_panel <- function() {
+  progress("importance: loading reference data and wave panel ...")
 
   ref    <- read_csv(file.path(REF_DIR, "provider_costofliving.csv"), show_col_types = FALSE, progress = FALSE)
   cpih   <- read_csv(file.path(REF_DIR, "cpih_index.csv"),           show_col_types = FALSE, progress = FALSE)
@@ -511,7 +548,7 @@ analysis_importance_hazard <- function() {
 
   long_path <- file.path(derived_dir(), "lsf_panel_long_2020_2026.csv")
   if (!file.exists(long_path))
-    stop("analysis_importance_hazard: need long panel; run 01_data.r first.", call. = FALSE)
+    stop("importance_build_wave_panel: need long panel; run 01_data.r first.", call. = FALSE)
 
   long <- read_csv(
     long_path,
@@ -583,7 +620,7 @@ analysis_importance_hazard <- function() {
   wave_rv <- build_real_value(
     as.data.frame(wave_samp), ref, awards, cpih, base_year = 2020,
     provider_col = "college", year_col = "entry_year",
-    .label = "importance (hazard wave)"
+    .label = "importance (wave panel)"
   ) |>
     transmute(
       UniqueID, year,
@@ -596,7 +633,7 @@ analysis_importance_hazard <- function() {
     left_join(wave_rv, by = c("UniqueID", "year")) |>
     filter(!is.na(rv_gbp_wave))
 
-  progress("importance (hazard): attaching ttwa_code and entry funding answers ...")
+  progress("importance: attaching ttwa_code and entry funding answers (wave panel) ...")
   ttwa_map <- dplyr::distinct(ref, lad_code, ttwa_code)
   stopifnot("ttwa_map is not unique by lad_code - the ttwa join would fan out" =
               !anyDuplicated(ttwa_map$lad_code))
@@ -604,9 +641,8 @@ analysis_importance_hazard <- function() {
   panel <- dplyr::left_join(panel, ttwa_map, by = "lad_code")
   stopifnot("ttwa_code join changed row count - fan-out" = nrow(panel) == n_before_ttwa)
 
-  # ---- 2. entry funding answers (SURVEY_VARS), same coercions as
-  # analysis_importance() -------------------------------------------------------
-  entry <- rv_entry_sample(ref, awards, cpih, .label = "importance (hazard entry funding)") |>
+  # entry funding answers (SURVEY_VARS), same coercions as analysis_importance()
+  entry <- rv_entry_sample(ref, awards, cpih, .label = "importance (wave panel entry funding)") |>
     mutate(
       crit_course = as.integer(suppressWarnings(as.integer(funding_imp_crse)) >= 4L),
       crit_uni    = as.integer(suppressWarnings(as.integer(funding_imp_uni))  >= 4L),
@@ -622,6 +658,55 @@ analysis_importance_hazard <- function() {
       rv     = as.numeric(scale(rv_gbp_wave)),
       course = as.character(course_use)
     )
+
+  # ---- course_family, same crosswalk-or-regex fallback as analysis_importance()
+  progress("importance: attaching course_family (wave panel) ...")
+  ph_files_present <- file.exists(file.path(REF_DIR, "placement_hours.csv")) &&
+    file.exists(file.path(REF_DIR, "course_crosswalk.csv"))
+
+  fam_out <- NULL
+  if (ph_files_present) {
+    fam_out <- tryCatch(attach_placement_hours(panel, dir = REF_DIR), error = function(e) {
+      message("importance: attach_placement_hours() failed on the wave panel (",
+              conditionMessage(e), "); falling back to course-string regex for course_family.")
+      NULL
+    })
+  }
+
+  if (!is.null(fam_out)) {
+    message("importance: wave-panel course_family via the placement-hours crosswalk (attach_placement_hours()).")
+    panel$course_family <- as.character(fam_out$course_family)
+    na_fam <- is.na(panel$course_family)
+    if (any(na_fam)) {
+      panel$course_family[na_fam] <- importance_course_family_regex(panel$course[na_fam])
+      message("importance: ", sum(na_fam),
+              " wave-panel rows had no crosswalk course_family; filled via the regex fallback.")
+    }
+  } else {
+    message("importance: reference/placement_hours.csv or course_crosswalk.csv absent; ",
+            "wave-panel course_family via regex fallback on `course` (importance_course_family_regex()).")
+    panel$course_family <- importance_course_family_regex(panel$course)
+  }
+  panel$course_family <- factor(panel$course_family, levels = PH_FAMILIES)
+
+  panel
+}
+
+# ===========================================================================
+# analysis_importance_hazard()  -  HAZARD frame (k = 8). See file header for
+# the question, the caveats and why course_family and components are dropped.
+#
+# Frame: takes importance_build_wave_panel()'s panel and restricts to
+# CONTINUING waves where financial confidence was asked (confidence non-
+# missing falls out of the complete-case restriction below, since confidence
+# and leave_course are continuing-wave survey items - see analysis_findings_
+# pack.r).
+# ===========================================================================
+analysis_importance_hazard <- function() {
+  out <- tables_dir()
+
+  progress("importance (hazard): building wave panel ...")
+  panel <- importance_build_wave_panel()
 
   # ---- 3. ONE fixed estimation sample: continuing waves, confidence asked ----
   need_vars <- unique(c(
@@ -713,6 +798,121 @@ analysis_importance_hazard <- function() {
 
   progress(paste0("importance (hazard): done (", eng$n_fits, " fits total) -> ", out))
   cat("Wrote: tbl_importance_hazard_shapley.csv, tbl_importance_hazard_summary.csv\n")
+
+  invisible(TRUE)
+}
+
+# ===========================================================================
+# analysis_importance_y1hazard()  -  Y1 HAZARD frame (k = 6). See file header
+# for the question and why confidence/considered and components are dropped.
+# The third frame of the triptych: entry (Y1 -> ever left, analysis_
+# importance()), Y1 -> gone next year (this function), continuing (Y2+ ->
+# gone next year, analysis_importance_hazard()).
+#
+# Frame: takes importance_build_wave_panel()'s panel (the same helper
+# analysis_importance_hazard() uses) and restricts to FIRST-YEAR rows only
+# (first_year %in% TRUE or year == course_first_year_wave), at_risk as
+# already defined by the helper, outcome left_next (gone next year, same
+# column and definition the hazard frame uses). Financial confidence and
+# considered-leaving are not asked in year 1, so first-year rows are never
+# complete-cased on them - that is why this frame has no confidence /
+# considered blocks (the hazard frame's other two dropped blocks, course_
+# family and components, are covered in the file header).
+# ===========================================================================
+analysis_importance_y1hazard <- function() {
+  out <- tables_dir()
+
+  progress("importance (Y1 hazard): building wave panel ...")
+  panel <- importance_build_wave_panel()
+
+  # ---- restrict to FIRST-YEAR rows only, ONE fixed estimation sample --------
+  first_year_row <- panel$first_year %in% TRUE | panel$year == panel$course_first_year_wave
+
+  need_vars <- unique(c(
+    "left_next", "course_family", "course", "year", "region", "ttwa_code",
+    "rv", SURVEY_VARS
+  ))
+  miss <- setdiff(need_vars, names(panel))
+  if (length(miss))
+    stop("analysis_importance_y1hazard: sample is missing: ", paste(miss, collapse = ", "), call. = FALSE)
+
+  ok <- panel$at_risk %in% TRUE & first_year_row & stats::complete.cases(panel[need_vars])
+  d  <- as.data.frame(panel[ok, , drop = FALSE])
+  n  <- nrow(d)
+  progress(sprintf("importance (Y1 hazard): fixed estimation sample n=%s (first-year waves, complete cases incl. region + ttwa_code) ...",
+                   format(n, big.mark = ",")))
+  if (n < 50L) stop("analysis_importance_y1hazard: fixed estimation sample too small (n=", n, ")", call. = FALSE)
+
+  d$course        <- factor(d$course)
+  d$course_family <- factor(as.character(d$course_family), levels = PH_FAMILIES)
+  d$region        <- as.character(d$region)
+  d$ttwa_code     <- as.character(d$ttwa_code)
+
+  # ---- separation purge, same rule as analysis_importance_hazard(), FE list
+  # widened to course_family and narrowed to calendar year (no year_of_study
+  # block in this frame) --------------------------------------------------------
+  fe_all <- c("course_family", "course", "year_chr", "region", "ttwa_code")
+  d$year_chr <- as.character(d$year)
+  repeat {
+    drop <- rep(FALSE, nrow(d))
+    for (v in fe_all) {
+      mu <- tapply(d$left_next, d[[v]], mean)
+      bad <- names(mu)[!is.na(mu) & (mu == 0 | mu == 1)]
+      if (length(bad)) drop <- drop | (as.character(d[[v]]) %in% bad)
+    }
+    if (!any(drop)) break
+    d <- d[!drop, , drop = FALSE]
+    d$course        <- droplevels(d$course)
+    d$course_family <- droplevels(d$course_family)
+  }
+  d$year_chr <- NULL
+  if (nrow(d) < n) {
+    message("importance (Y1 hazard): dropped ", n - nrow(d),
+            " rows in outcome-constant FE levels (separation purge); n now ",
+            format(nrow(d), big.mark = ","))
+    n <- nrow(d)
+  }
+  if (n < 50L) stop("analysis_importance_y1hazard: sample too small after separation purge (n=", n, ")", call. = FALSE)
+
+  d$year_f <- factor(d$year)
+
+  # ---- block definitions (k = 6) and the shared engine -----------------------
+  BLOCK_KEYS_Y1 <- c("family", "course", "cohort", "place", "real_value", "funding_entry")
+  block_def_y1 <- list(
+    family        = list(type = "fe",   var = "course_family", label = "Course family"),
+    course        = list(type = "fe",   var = "course",         label = "Specific course"),
+    cohort        = list(type = "fe",   var = "year_f",         label = "Entry cohort"),
+    place         = list(type = "fe",   var = NULL,
+                         label = list(region = "Region", ttwa = "Travel-to-work area")),
+    real_value    = list(type = "term", var = "rv",       label = "Real LSF value (first-year wave)"),
+    funding_entry = list(type = "term", var = SURVEY_RHS, label = "Entry funding answers")
+  )
+  stopifnot(identical(names(block_def_y1), BLOCK_KEYS_Y1))
+
+  eng <- importance_shapley_engine(
+    d, outcome = "left_next", block_def = block_def_y1,
+    place_var = c(region = "region", ttwa = "ttwa_code"),
+    progress_label = "importance (Y1 hazard)", progress_every = 16L
+  )
+
+  write_csv(eng$shapley, file.path(out, "tbl_importance_y1hazard_shapley.csv"))
+  progress(paste0("  wrote tbl_importance_y1hazard_shapley.csv (", nrow(eng$shapley), " rows)"))
+
+  write_csv(eng$summary, file.path(out, "tbl_importance_y1hazard_summary.csv"))
+  progress(paste0("  wrote tbl_importance_y1hazard_summary.csv (", nrow(eng$summary), " rows)"))
+
+  cat("\n=== Relative importance (Shapley), Y1 hazard frame: gone next year ===\n")
+  cat("--- region ---\n")
+  print(as.data.frame(eng$shapley[eng$shapley$geography == "region", ] |>
+                        select(rank, block_label, share_pct)), row.names = FALSE)
+  cat("--- ttwa ---\n")
+  print(as.data.frame(eng$shapley[eng$shapley$geography == "ttwa", ] |>
+                        select(rank, block_label, share_pct)), row.names = FALSE)
+  cat("\n")
+  print(as.data.frame(eng$summary), row.names = FALSE)
+
+  progress(paste0("importance (Y1 hazard): done (", eng$n_fits, " fits total) -> ", out))
+  cat("Wrote: tbl_importance_y1hazard_shapley.csv, tbl_importance_y1hazard_summary.csv\n")
 
   invisible(TRUE)
 }
