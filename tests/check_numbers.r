@@ -151,7 +151,17 @@ PROBES <- list(
   imp_hz_n               = function() { d <- read_tbl("tbl_importance_hazard_summary.csv"); pick(d, d$geography == "region", "n") },
   imp_hz_r2_full_region  = function() { d <- read_tbl("tbl_importance_hazard_summary.csv"); pick(d, d$geography == "region", "r2_mcfadden_full") },
   imp_hz_auc_full_region = function() { d <- read_tbl("tbl_importance_hazard_summary.csv"); pick(d, d$geography == "region", "auc_full") },
-  imp_hz_share_top_region = function() { d <- read_tbl("tbl_importance_hazard_shapley.csv"); pick(d, d$geography == "region" & d$rank == 1, "share_pct") }
+  imp_hz_share_top_region = function() { d <- read_tbl("tbl_importance_hazard_shapley.csv"); pick(d, d$geography == "region" & d$rank == 1, "share_pct") },
+
+  # --- relative importance (Shapley), Y1 hazard frame, region geography ---
+  imp_y1hz_n               = function() { d <- read_tbl("tbl_importance_y1hazard_summary.csv"); pick(d, d$geography == "region", "n") },
+  imp_y1hz_r2_full_region  = function() { d <- read_tbl("tbl_importance_y1hazard_summary.csv"); pick(d, d$geography == "region", "r2_mcfadden_full") },
+  imp_y1hz_auc_full_region = function() { d <- read_tbl("tbl_importance_y1hazard_summary.csv"); pick(d, d$geography == "region", "auc_full") },
+  imp_y1hz_share_top_region = function() { d <- read_tbl("tbl_importance_y1hazard_shapley.csv"); pick(d, d$geography == "region" & d$rank == 1, "share_pct") },
+
+  # --- leaver prediction benchmark: test AUC, logit_main, two always-present frames ---
+  pred_entry_logit_auc = function() { d <- read_tbl("tbl_leaver_prediction.csv"); pick(d, d$frame == "entry_ever" & d$model == "logit_main", "auc") },
+  pred_cont_logit_auc  = function() { d <- read_tbl("tbl_leaver_prediction.csv"); pick(d, d$frame == "cont_next"  & d$model == "logit_main", "auc") }
 )
 
 # ---- ASCII lint ------------------------------------------------------------

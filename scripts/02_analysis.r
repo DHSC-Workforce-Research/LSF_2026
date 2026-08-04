@@ -83,6 +83,8 @@ try_analysis("triangle cross-question", analysis_triangle_cross)
 progress("02_analysis: relative importance (Shapley) ...")
 try_analysis("relative importance", analysis_importance)
 try_analysis("relative importance (hazard frame)", analysis_importance_hazard)
+try_analysis("relative importance (Y1 hazard frame)", analysis_importance_y1hazard)
+try_analysis("leaver prediction benchmark", analysis_leaver_prediction)
 
 rv_trace_report()
 
