@@ -32,3 +32,7 @@
 "erosion_real_end","Erosion real value of frozen 5000 grant","3856",0,"count","reference/cpi_index.csv","Frozen 2026-07-15 recomputed"
 "erosion_pct_of_face","Erosion percent of face value","77",0,"count","reference/cpi_index.csv","Frozen 2026-07-15 recomputed"
 "erosion_loss_pct","Erosion percent lost since 2020","23",0,"count","reference/cpi_index.csv","Frozen 2026-07-15 recomputed"
+"imp_n","Relative importance fixed estimation sample n, region",,0,"count","tbl_importance_summary.csv","capture"
+"imp_r2_full_region","Relative importance full-model McFadden R2, region",,3,"stat","tbl_importance_summary.csv","capture"
+"imp_auc_full_region","Relative importance full-model AUC, region",,3,"stat","tbl_importance_summary.csv","capture"
+"imp_share_top_region","Relative importance rank-1 block share_pct, region",,3,"stat","tbl_importance_shapley.csv","capture"

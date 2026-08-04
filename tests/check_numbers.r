@@ -139,7 +139,13 @@ PROBES <- list(
   # --- erosion (recomputed from reference/cpi_index.csv) ---
   erosion_real_end    = function() erosion()$real_end,
   erosion_pct_of_face = function() erosion()$pct_of_face,
-  erosion_loss_pct    = function() erosion()$loss_pct
+  erosion_loss_pct    = function() erosion()$loss_pct,
+
+  # --- relative importance (Shapley), region geography ---
+  imp_n               = function() { d <- read_tbl("tbl_importance_summary.csv"); pick(d, d$geography == "region", "n") },
+  imp_r2_full_region  = function() { d <- read_tbl("tbl_importance_summary.csv"); pick(d, d$geography == "region", "r2_mcfadden_full") },
+  imp_auc_full_region = function() { d <- read_tbl("tbl_importance_summary.csv"); pick(d, d$geography == "region", "auc_full") },
+  imp_share_top_region = function() { d <- read_tbl("tbl_importance_shapley.csv"); pick(d, d$geography == "region" & d$rank == 1, "share_pct") }
 )
 
 # ---- ASCII lint ------------------------------------------------------------

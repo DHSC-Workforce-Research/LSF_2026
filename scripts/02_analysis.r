@@ -80,6 +80,9 @@ try_analysis("confidence bands",  analysis_confidence_bands)
 try_analysis("triangle rates",    analysis_triangle_rates)
 try_analysis("triangle cross-question", analysis_triangle_cross)
 
+progress("02_analysis: relative importance (Shapley) ...")
+try_analysis("relative importance", analysis_importance)
+
 rv_trace_report()
 
 progress("02_analysis.r complete -> ", outputs_dir())
