@@ -36,3 +36,7 @@
 "imp_r2_full_region","Relative importance full-model McFadden R2, region",,3,"stat","tbl_importance_summary.csv","capture"
 "imp_auc_full_region","Relative importance full-model AUC, region",,3,"stat","tbl_importance_summary.csv","capture"
 "imp_share_top_region","Relative importance rank-1 block share_pct, region",,3,"stat","tbl_importance_shapley.csv","capture"
+"imp_hz_n","Relative importance hazard frame fixed estimation sample n, region",,0,"count","tbl_importance_hazard_summary.csv","capture"
+"imp_hz_r2_full_region","Relative importance hazard frame full-model McFadden R2, region",,3,"stat","tbl_importance_hazard_summary.csv","capture"
+"imp_hz_auc_full_region","Relative importance hazard frame full-model AUC, region",,3,"stat","tbl_importance_hazard_summary.csv","capture"
+"imp_hz_share_top_region","Relative importance hazard frame rank-1 block share_pct, region",,3,"stat","tbl_importance_hazard_shapley.csv","capture"

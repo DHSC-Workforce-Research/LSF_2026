@@ -145,7 +145,13 @@ PROBES <- list(
   imp_n               = function() { d <- read_tbl("tbl_importance_summary.csv"); pick(d, d$geography == "region", "n") },
   imp_r2_full_region  = function() { d <- read_tbl("tbl_importance_summary.csv"); pick(d, d$geography == "region", "r2_mcfadden_full") },
   imp_auc_full_region = function() { d <- read_tbl("tbl_importance_summary.csv"); pick(d, d$geography == "region", "auc_full") },
-  imp_share_top_region = function() { d <- read_tbl("tbl_importance_shapley.csv"); pick(d, d$geography == "region" & d$rank == 1, "share_pct") }
+  imp_share_top_region = function() { d <- read_tbl("tbl_importance_shapley.csv"); pick(d, d$geography == "region" & d$rank == 1, "share_pct") },
+
+  # --- relative importance (Shapley), hazard frame, region geography ---
+  imp_hz_n               = function() { d <- read_tbl("tbl_importance_hazard_summary.csv"); pick(d, d$geography == "region", "n") },
+  imp_hz_r2_full_region  = function() { d <- read_tbl("tbl_importance_hazard_summary.csv"); pick(d, d$geography == "region", "r2_mcfadden_full") },
+  imp_hz_auc_full_region = function() { d <- read_tbl("tbl_importance_hazard_summary.csv"); pick(d, d$geography == "region", "auc_full") },
+  imp_hz_share_top_region = function() { d <- read_tbl("tbl_importance_hazard_shapley.csv"); pick(d, d$geography == "region" & d$rank == 1, "share_pct") }
 )
 
 # ---- ASCII lint ------------------------------------------------------------
