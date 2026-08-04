@@ -269,3 +269,114 @@ build_importance_triptych_slide <- function() {
     theme_dhsc_slide(13) +
     theme(panel.grid.major.y = element_blank())
 }
+
+# ===========================================================================
+# PUBLICATION TABLES - the decomposition as three branded tables, rendered
+# through dhsc_table_plot() (functions/deck_helpers.r), the repo's pure-
+# ggplot table renderer. Same region-geography numbers as the bar slides.
+#
+#   build_importance_table_overall()  how much of leaving is explainable at
+#                                     all, per frame (n, leave rate, pseudo-
+#                                     R2, AUC)
+#   build_importance_table_shares()   share of the explained variation taken
+#                                     by each factor, three frame columns
+#   build_importance_table_models()   test-set AUC, logit vs best flexible
+#
+# Each returns a ggplot; save with save_slide() like any other builder. Not
+# registered in the manifest (feat/deck-text is renumbering the deck).
+# ===========================================================================
+
+# frame spec shared by the three tables: tag, csv pair, display label
+importance_frames_spec <- function() list(
+  list(tag = "y1",    shp = "tbl_importance_y1hazard_shapley.csv",
+       smy = "tbl_importance_y1hazard_summary.csv",
+       pred = "y1_next",    label = "First year -> gone next year"),
+  list(tag = "entry", shp = "tbl_importance_shapley.csv",
+       smy = "tbl_importance_summary.csv",
+       pred = "entry_ever", label = "At entry -> leaves before finishing"),
+  list(tag = "cont",  shp = "tbl_importance_hazard_shapley.csv",
+       smy = "tbl_importance_hazard_summary.csv",
+       pred = "cont_next",  label = "Years 2+ -> gone next year")
+)
+
+build_importance_table_overall <- function() {
+  pred <- deck_table("tbl_leaver_prediction.csv")
+  rows <- lapply(importance_frames_spec(), function(f) {
+    smy <- deck_table(f$smy); smy <- smy[smy$geography == "region", ]
+    br  <- pred$base_rate[pred$frame == f$pred & pred$model == "logit_main"]
+    tibble::tibble(
+      Frame              = f$label,
+      n                  = format(smy$n[1], big.mark = ","),
+      `Leave rate`       = if (length(br) == 1 && is.finite(br))
+                             sprintf("%.0f%%", 100 * br) else "-",
+      `Explained (pseudo-R2)` = sprintf("%.1f%%", 100 * smy$r2_mcfadden_full[1]),
+      AUC                = sprintf("%.2f", smy$auc_full[1])
+    )
+  })
+  dhsc_table_plot(
+    dplyr::bind_rows(rows),
+    title    = "How much of leaving can be explained at all",
+    subtitle = "Course, place, cohort, the real grant value and the survey answers together",
+    caption  = paste("Region geography. Leave rates from the matching prediction-benchmark",
+                     "samples. Most of the variation in leaving is not explained by anything measured."))
+}
+
+build_importance_table_shares <- function() {
+  key_label <- c(course = "Specific course",
+                 survey = "Funding-dependence answers (at entry)",
+                 funding_entry = "Funding-dependence answers (at entry)",
+                 place = "Region", considered = "Considered leaving (in-year)",
+                 family = "Course family", components = "Grant components",
+                 survey_year = "Survey year", cohort = "Entry cohort",
+                 real_value = "Real value of the grant",
+                 confidence = "Financial confidence (in-year)",
+                 study_year = "Year of study")
+
+  frames <- importance_frames_spec()
+  got <- lapply(frames, function(f) {
+    shp <- deck_table(f$shp); shp <- shp[shp$geography == "region", ]
+    stats::setNames(shp$share_pct, unname(key_label[shp$block]))
+  })
+  labels_all <- unique(unname(key_label))
+  best <- vapply(labels_all, function(l)
+    max(unlist(lapply(got, function(g) g[l])), na.rm = TRUE), numeric(1))
+  labels_all <- labels_all[order(-best)]
+
+  fmt <- function(g, l) {
+    v <- g[l]
+    if (is.na(v)) "-" else if (v < 1) sprintf("%.1f%%", v) else sprintf("%.0f%%", v)
+  }
+  df <- tibble::tibble(
+    Factor = labels_all,
+    `First year -> next yr` = vapply(labels_all, function(l) fmt(got[[1]], l), character(1)),
+    `At entry -> ever`      = vapply(labels_all, function(l) fmt(got[[2]], l), character(1)),
+    `Years 2+ -> next yr`   = vapply(labels_all, function(l) fmt(got[[3]], l), character(1))
+  )
+  dhsc_table_plot(
+    df,
+    title    = "Of what is explained, the share taken by each factor",
+    subtitle = "The funding signal lives in year one; course takes over later",
+    caption  = paste("Shapley decomposition, region geography; shares sum to 100% within each column.",
+                     "A dash means the factor does not exist in that frame. Descriptive, not causal."))
+}
+
+build_importance_table_models <- function() {
+  pred <- deck_table("tbl_leaver_prediction.csv")
+  rows <- lapply(importance_frames_spec(), function(f) {
+    sub <- pred[pred$frame == f$pred, ]
+    lg  <- sub$auc[sub$model == "logit_main"]
+    fx  <- suppressWarnings(max(sub$auc[sub$model %in% c("tree", "forest")], na.rm = TRUE))
+    tibble::tibble(
+      Frame               = f$label,
+      `Logit AUC`         = sprintf("%.3f", lg),
+      `Best flexible AUC` = if (is.finite(fx)) sprintf("%.3f", fx) else "-",
+      Gain                = if (is.finite(fx)) sprintf("%+.3f", fx - lg) else "-"
+    )
+  })
+  dhsc_table_plot(
+    dplyr::bind_rows(rows),
+    title    = "A more flexible model does not do better",
+    subtitle = "Held-out AUC, split by student: the ceiling is the data, not the model",
+    caption  = paste("Grouped 70/30 train/test split. randomForest is not installed on the",
+                     "secure machine, so the flexible comparator is a pruned regression tree."))
+}
