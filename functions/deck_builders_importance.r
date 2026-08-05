@@ -4,8 +4,9 @@
 # build_importance_slide()  -  horizontal bar chart of the Shapley (LMG)
 # decomposition of left_before_finish across the seven predictor blocks that
 # analysis_importance() (functions/analysis_importance.r) fits: course family,
-# specific course, entry cohort, region, real LSF value, survey funding
-# answers, grant components. One bar per block, region geography, ranked by
+# specific course, university (HEI), entry cohort, region, real LSF value,
+# survey funding answers, grant components. One bar per block, region
+# geography, ranked by
 # share_pct descending (largest share at the top of the chart).
 #
 # build_importance_hazard_slide()  -  the same ranked-bar design, reading
@@ -323,6 +324,7 @@ build_importance_table_overall <- function() {
 
 build_importance_table_shares <- function() {
   key_label <- c(course = "Specific course",
+                 hei = "University (HEI)",
                  survey = "Funding-dependence answers (at entry)",
                  funding_entry = "Funding-dependence answers (at entry)",
                  place = "Region", considered = "Considered leaving (in-year)",
@@ -399,6 +401,7 @@ save_importance_econ_table <- function(file = file.path(deck_dir(), "table_impor
   fam <- "serif"; ink <- "#111111"; grey <- "#444444"
 
   key_label <- c(course = "Specific course",
+                 hei = "University (HEI)",
                  survey = "Funding-dependence answers (entry)",
                  funding_entry = "Funding-dependence answers (entry)",
                  place = "Region", considered = "Considered leaving (in-year)",
@@ -466,7 +469,7 @@ save_importance_econ_table <- function(file = file.path(deck_dir(), "table_impor
 
   note <- paste(
     "Notes: each column decomposes the McFadden pseudo-R2 of a logistic regression (fixest::feglm;",
-    "course, cohort or year, and region entered as absorbed fixed-effect blocks) into order-independent",
+    "course, university, cohort or year, and region entered as absorbed fixed-effect blocks) into order-independent",
     "Shapley (LMG) values over predictor blocks; shares sum to 100 within a column. One fixed estimation",
     "sample per column (complete cases; fixed-effect levels with a constant outcome removed). Region",
     "geography; a travel-to-work-area sensitivity is in the underlying tables. A dash means the block is",

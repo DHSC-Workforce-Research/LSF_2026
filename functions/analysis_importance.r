@@ -5,16 +5,17 @@
 #
 # analysis_importance()         - ENTRY frame. Of the variation in
 #   left_before_finish this model can explain, how much is attributable to
-#   each of seven predictor blocks: course family, specific course, entry
-#   cohort, place (region or travel-to-work area), real LSF value, the five
-#   survey funding answers, and the grant-component flags?
+#   each of eight predictor blocks: course family, specific course,
+#   university (HEI), entry cohort, place (region or travel-to-work area),
+#   real LSF value, the five survey funding answers, and the grant-component
+#   flags?
 #
 # analysis_importance_hazard()  - HAZARD frame. Of the variation in gone-
 #   next-year this model can explain, for a CONTINUING student mid-course,
-#   how much is attributable to each of eight predictor blocks: specific
-#   course, year of study, survey (calendar) year, place, this year's real
-#   LSF value, the five entry funding answers, this year's financial
-#   confidence, and this year's considered-leaving flag? Survivorship is the
+#   how much is attributable to each of nine predictor blocks: specific
+#   course, university (HEI), year of study, survey (calendar) year, place,
+#   this year's real LSF value, the five entry funding answers, this year's
+#   financial confidence, and this year's considered-leaving flag? Survivorship is the
 #   FRAME here, not a bias to correct for: every row has, by construction,
 #   reached a continuing wave.
 #
@@ -22,10 +23,10 @@
 #   completing the triptych: entry (Y1 -> ever left), Y1 -> gone next year,
 #   continuing (Y2+ -> gone next year, the HAZARD frame above). Of the
 #   variation in gone-next-year among FIRST-YEAR students, how much is
-#   attributable to each of six predictor blocks: course family, specific
-#   course, entry cohort (calendar year - for a first-year row this IS the
-#   entry cohort), place, this year's real LSF value, and the five entry
-#   funding answers? No confidence / considered-leaving blocks: those survey
+#   attributable to each of seven predictor blocks: course family, specific
+#   course, university (HEI), entry cohort (calendar year - for a first-year
+#   row this IS the entry cohort), place, this year's real LSF value, and the
+#   five entry funding answers? No confidence / considered-leaving blocks: those survey
 #   questions are not asked in year 1, so first-year rows are never complete-
 #   cased on them. No components block: the wave real value already carries
 #   the full nominal package, same reasoning as the HAZARD frame.
@@ -87,8 +88,8 @@
 # subsets that CONTAIN the place block need refitting, because a subset
 # without place does not depend on which geography variable place would have
 # used; the rest are reused from the region cache. 3 * 2^(k-1) model fits in
-# total (192 for the entry frame's k=7, 384 for the hazard frame's k=8, 96
-# for the Y1 hazard frame's k=6), keyed on a canonical subset id so nothing
+# total (384 for the entry frame's k=8, 768 for the hazard frame's k=9, 192
+# for the Y1 hazard frame's k=7), keyed on a canonical subset id so nothing
 # is fit twice.
 #
 # REFACTOR NOTE (2026, addendum task). The subset-fitting + Shapley machinery
@@ -102,6 +103,17 @@
 # hazard frame's numbers are unchanged (region shares course 61.20, survey
 # 11.74, confidence 9.65, considered 8.85, place 3.55, study_year 3.09,
 # survey_year 1.61, real_value 0.30; r2_mcfadden_full 0.0642; n 85,932).
+#
+# ADDENDUM (2026-08-05). A university (HEI) block was added to all three
+# frames after console checks showed college fixed effects alone explain
+# more of leaving than course fixed effects alone (pseudo-R2 0.0142 vs
+# 0.0119 on the entry sample, largely disjoint), so the shares recorded in
+# the notes above predate the HEI block and the imp_* harness baselines
+# re-capture on the first run after this change. The per-GBP1k retention
+# effect itself survives college FE (OR 0.956, college-clustered p 2.5e-05),
+# but expect the real_value SHARE to shrink toward its within-provider
+# component: the college block absorbs the cross-sectional, place-based part
+# of real value. Quote the share and the surviving OR together.
 #
 # REFACTOR NOTE (2026, addendum 2). The hazard frame's panel-building code
 # (reference data, long panel, trajectories, at_risk / left_next / year_of_
@@ -415,11 +427,11 @@ analysis_importance <- function() {
   # components. "place" is region for the headline run and ttwa_code for the
   # sensitivity run; both variables have to be non-missing in the SAME sample
   # so the two geographies share n and their R2 are comparable.
-  BLOCK_KEYS <- c("family", "course", "cohort", "place",
+  BLOCK_KEYS <- c("family", "course", "hei", "cohort", "place",
                   "real_value", "survey", "components")
 
   need_vars <- unique(c(
-    "left_before_finish", "course_family", "course", "entry_year",
+    "left_before_finish", "course_family", "course", "college", "entry_year",
     "region", "ttwa_code", "rv", SURVEY_VARS, COMP_VARS
   ))
   miss <- setdiff(need_vars, names(samp))
@@ -436,6 +448,7 @@ analysis_importance <- function() {
   d$course        <- factor(d$course)
   d$entry_year    <- factor(d$entry_year)
   d$course_family <- factor(as.character(d$course_family), levels = PH_FAMILIES)
+  d$college       <- as.character(d$college)
   d$region        <- as.character(d$region)
   d$ttwa_code     <- as.character(d$ttwa_code)
 
@@ -447,7 +460,7 @@ analysis_importance <- function() {
   # differences the Shapley values are built from would not be comparable.
   # Purge such levels here, iterating until stable (removing a course can make
   # another level constant), so every subset fits on the identical sample.
-  fe_all <- c("course_family", "course", "cohort_chr", "region", "ttwa_code")
+  fe_all <- c("course_family", "course", "college", "cohort_chr", "region", "ttwa_code")
   d$cohort_chr <- as.character(d$entry_year)
   repeat {
     drop <- rep(FALSE, nrow(d))
@@ -475,6 +488,7 @@ analysis_importance <- function() {
   block_def <- list(
     family     = list(type = "fe",   var = "course_family", label = "Course family"),
     course     = list(type = "fe",   var = "course",         label = "Specific course"),
+    hei        = list(type = "fe",   var = "college",        label = "University (HEI)"),
     cohort     = list(type = "fe",   var = "entry_year",     label = "Entry cohort"),
     place      = list(type = "fe",   var = NULL,
                       label = list(region = "Region", ttwa = "Travel-to-work area")),
@@ -693,7 +707,7 @@ importance_build_wave_panel <- function() {
 }
 
 # ===========================================================================
-# analysis_importance_hazard()  -  HAZARD frame (k = 8). See file header for
+# analysis_importance_hazard()  -  HAZARD frame (k = 9). See file header for
 # the question, the caveats and why course_family and components are dropped.
 #
 # Frame: takes importance_build_wave_panel()'s panel and restricts to
@@ -710,8 +724,8 @@ analysis_importance_hazard <- function() {
 
   # ---- 3. ONE fixed estimation sample: continuing waves, confidence asked ----
   need_vars <- unique(c(
-    "left_next", "course", "year_of_study", "year", "region", "ttwa_code",
-    "rv", SURVEY_VARS, "confidence", "leave_course"
+    "left_next", "course", "college_use", "year_of_study", "year", "region",
+    "ttwa_code", "rv", SURVEY_VARS, "confidence", "leave_course"
   ))
   miss <- setdiff(need_vars, names(panel))
   if (length(miss))
@@ -725,13 +739,14 @@ analysis_importance_hazard <- function() {
   if (n < 50L) stop("analysis_importance_hazard: fixed estimation sample too small (n=", n, ")", call. = FALSE)
 
   d$course        <- factor(d$course)
+  d$college_use   <- as.character(d$college_use)
   d$year_of_study <- as.integer(d$year_of_study)
   d$region        <- as.character(d$region)
   d$ttwa_code     <- as.character(d$ttwa_code)
 
   # ---- 3b. separation purge, same rule as analysis_importance(), FE list
   # widened to include year_of_study and calendar year -------------------------
-  fe_all <- c("course", "year_of_study_chr", "year_chr", "region", "ttwa_code")
+  fe_all <- c("course", "college_use", "year_of_study_chr", "year_chr", "region", "ttwa_code")
   d$year_of_study_chr <- as.character(d$year_of_study)
   d$year_chr          <- as.character(d$year)
   repeat {
@@ -759,10 +774,11 @@ analysis_importance_hazard <- function() {
   d$year_f        <- factor(d$year)
 
   # ---- 4. block definitions (k = 8) and the shared engine --------------------
-  BLOCK_KEYS_HZ <- c("course", "study_year", "survey_year", "place",
+  BLOCK_KEYS_HZ <- c("course", "hei", "study_year", "survey_year", "place",
                      "real_value", "funding_entry", "confidence", "considered")
   block_def_hz <- list(
     course        = list(type = "fe",   var = "course",        label = "Specific course"),
+    hei           = list(type = "fe",   var = "college_use",   label = "University (HEI)"),
     study_year    = list(type = "fe",   var = "year_of_study",  label = "Year of study"),
     survey_year   = list(type = "fe",   var = "year_f",         label = "Survey year"),
     place         = list(type = "fe",   var = NULL,
@@ -829,8 +845,8 @@ analysis_importance_y1hazard <- function() {
   first_year_row <- panel$first_year %in% TRUE | panel$year == panel$course_first_year_wave
 
   need_vars <- unique(c(
-    "left_next", "course_family", "course", "year", "region", "ttwa_code",
-    "rv", SURVEY_VARS
+    "left_next", "course_family", "course", "college_use", "year", "region",
+    "ttwa_code", "rv", SURVEY_VARS
   ))
   miss <- setdiff(need_vars, names(panel))
   if (length(miss))
@@ -845,13 +861,14 @@ analysis_importance_y1hazard <- function() {
 
   d$course        <- factor(d$course)
   d$course_family <- factor(as.character(d$course_family), levels = PH_FAMILIES)
+  d$college_use   <- as.character(d$college_use)
   d$region        <- as.character(d$region)
   d$ttwa_code     <- as.character(d$ttwa_code)
 
   # ---- separation purge, same rule as analysis_importance_hazard(), FE list
   # widened to course_family and narrowed to calendar year (no year_of_study
   # block in this frame) --------------------------------------------------------
-  fe_all <- c("course_family", "course", "year_chr", "region", "ttwa_code")
+  fe_all <- c("course_family", "course", "college_use", "year_chr", "region", "ttwa_code")
   d$year_chr <- as.character(d$year)
   repeat {
     drop <- rep(FALSE, nrow(d))
@@ -877,10 +894,11 @@ analysis_importance_y1hazard <- function() {
   d$year_f <- factor(d$year)
 
   # ---- block definitions (k = 6) and the shared engine -----------------------
-  BLOCK_KEYS_Y1 <- c("family", "course", "cohort", "place", "real_value", "funding_entry")
+  BLOCK_KEYS_Y1 <- c("family", "course", "hei", "cohort", "place", "real_value", "funding_entry")
   block_def_y1 <- list(
     family        = list(type = "fe",   var = "course_family", label = "Course family"),
     course        = list(type = "fe",   var = "course",         label = "Specific course"),
+    hei           = list(type = "fe",   var = "college_use",    label = "University (HEI)"),
     cohort        = list(type = "fe",   var = "year_f",         label = "Entry cohort"),
     place         = list(type = "fe",   var = NULL,
                          label = list(region = "Region", ttwa = "Travel-to-work area")),
