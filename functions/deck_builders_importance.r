@@ -380,3 +380,132 @@ build_importance_table_models <- function() {
     caption  = paste("Grouped 70/30 train/test split. randomForest is not installed on the",
                      "secure machine, so the flexible comparator is a pruned regression tree."))
 }
+
+# ===========================================================================
+# save_importance_econ_table()  -  the decomposition as ONE journal-style
+# table (booktabs rules, serif, no fills): a shares panel over a summary-
+# statistics panel, in the format of an econometrics journal rather than a
+# slide. Draws with plain geom_text and three horizontal rules; sizes and
+# saves itself (do NOT pass this through save_slide, which forces 16:9).
+#
+#   save_importance_econ_table()                        -> deck_dir()/table_importance.png
+#   save_importance_econ_table("C:/somewhere/tbl.png")  -> that path
+#
+# Sources: the three *_shapley/*_summary CSV pairs plus tbl_leaver_
+# prediction.csv (leave rates). Region geography.
+# ===========================================================================
+save_importance_econ_table <- function(file = file.path(deck_dir(), "table_importance.png"),
+                                       dpi = 300) {
+  fam <- "serif"; ink <- "#111111"; grey <- "#444444"
+
+  key_label <- c(course = "Specific course",
+                 survey = "Funding-dependence answers (entry)",
+                 funding_entry = "Funding-dependence answers (entry)",
+                 place = "Region", considered = "Considered leaving (in-year)",
+                 family = "Course family", components = "Grant components",
+                 survey_year = "Survey year", cohort = "Entry cohort",
+                 real_value = "Real value of the grant",
+                 confidence = "Financial confidence (in-year)",
+                 study_year = "Year of study")
+
+  frames <- importance_frames_spec()          # y1, entry, cont (defined above)
+  pred   <- deck_table("tbl_leaver_prediction.csv")
+
+  shares <- list(); stats <- list()
+  for (i in seq_along(frames)) {
+    f   <- frames[[i]]
+    shp <- deck_table(f$shp); shp <- shp[shp$geography == "region", ]
+    smy <- deck_table(f$smy); smy <- smy[smy$geography == "region", ]
+    br  <- pred$base_rate[pred$frame == f$pred & pred$model == "logit_main"]
+    shares[[i]] <- stats::setNames(shp$share_pct, unname(key_label[shp$block]))
+    stats[[i]] <- c(
+      `Observations`          = format(smy$n[1], big.mark = ","),
+      `Share who leave`       = if (length(br) == 1 && is.finite(br))
+                                  sprintf("%.3f", br) else "-",
+      `McFadden pseudo-R2`    = sprintf("%.3f", smy$r2_mcfadden_full[1]),
+      `Tjur R2`               = sprintf("%.3f", smy$r2_tjur_full[1]),
+      `AUC`                   = sprintf("%.3f", smy$auc_full[1]),
+      `Predictor blocks (k)`  = as.character(smy$k_blocks[1]),
+      `Model fits`            = as.character(3L * 2L^(smy$k_blocks[1] - 1L))
+    )
+  }
+
+  labels_all <- unique(unname(key_label))
+  best <- vapply(labels_all, function(l)
+    max(unlist(lapply(shares, function(g) g[l])), na.rm = TRUE), numeric(1))
+  labels_all <- labels_all[order(-best)]
+  fmt_share <- function(g, l) { v <- g[l]; if (is.na(v)) "-" else sprintf("%.1f", v) }
+
+  # ---- cell grid -------------------------------------------------------------
+  x_lab <- 0; x_col <- c(6.0, 8.0, 10.0)   # left edge of label col; right edges of the 3 frame cols
+  head1 <- c("Gone next year,", "Leaves before", "Gone next year,")
+  head2 <- c("first years", "finishing, at entry", "years 2+")
+  head3 <- c("(1)", "(2)", "(3)")
+
+  rows <- list(); y <- 0
+  add <- function(lab, vals, face = "plain", gap = 1) {
+    y <<- y - gap
+    rows[[length(rows) + 1L]] <<- data.frame(
+      x = c(x_lab, x_col), y = y, hj = c(0, 1, 1, 1),
+      txt = c(lab, vals), face = face, stringsAsFactors = FALSE)
+  }
+  add("", head1); add("", head2, gap = 0.85); add("", head3, gap = 0.9)
+  y_rule_head <- y - 0.55
+  add("Share of explained variation (%)", c("", "", ""), face = "italic", gap = 1.35)
+  for (l in labels_all)
+    add(l, vapply(shares, fmt_share, character(1), l = l))
+  y_rule_mid <- y - 0.55
+  first_stat <- TRUE
+  for (s in names(stats[[1]])) {
+    add(s, vapply(stats, function(v) v[[s]], character(1)),
+        gap = if (first_stat) 1.35 else 1)
+    first_stat <- FALSE
+  }
+  cells <- do.call(rbind, rows)
+  y_top <- 0.75; y_bot <- y - 0.6
+
+  note <- paste(
+    "Notes: each column decomposes the McFadden pseudo-R2 of a logistic regression (fixest::feglm;",
+    "course, cohort or year, and region entered as absorbed fixed-effect blocks) into order-independent",
+    "Shapley (LMG) values over predictor blocks; shares sum to 100 within a column. One fixed estimation",
+    "sample per column (complete cases; fixed-effect levels with a constant outcome removed). Region",
+    "geography; a travel-to-work-area sensitivity is in the underlying tables. A dash means the block is",
+    "not defined in that frame: in-year questions are not asked in year one, and grant top-ups are inside",
+    "the year-specific real value. Share who leave is taken from the matching prediction samples.",
+    "Associational, not causal.")
+
+  g <- ggplot2::ggplot() +
+    ggplot2::annotate("segment", x = x_lab, xend = max(x_col), y = y_top, yend = y_top,
+                      linewidth = 0.8, colour = ink) +
+    ggplot2::annotate("segment", x = x_lab, xend = max(x_col), y = y_rule_head, yend = y_rule_head,
+                      linewidth = 0.35, colour = ink) +
+    ggplot2::annotate("segment", x = x_lab, xend = max(x_col), y = y_rule_mid, yend = y_rule_mid,
+                      linewidth = 0.35, colour = ink) +
+    ggplot2::annotate("segment", x = x_lab, xend = max(x_col), y = y_bot, yend = y_bot,
+                      linewidth = 0.8, colour = ink) +
+    ggplot2::geom_text(data = cells,
+                       ggplot2::aes(x = x, y = y, label = txt, hjust = hj, fontface = face),
+                       size = 3.4, family = fam, colour = ink) +
+    ggplot2::scale_x_continuous(limits = c(x_lab - 0.1, max(x_col) + 0.1), expand = c(0, 0)) +
+    ggplot2::scale_y_continuous(limits = c(y_bot - 0.4, 3.4), expand = c(0, 0)) +
+    ggplot2::annotate("text", x = x_lab, y = 2.6, hjust = 0, family = fam, size = 4.1,
+                      fontface = "bold", colour = ink,
+                      label = "Table 1. What explains leaving: relative importance by frame") +
+    ggplot2::annotate("text", x = x_lab, y = 1.7, hjust = 0, family = fam, size = 3.3,
+                      colour = grey,
+                      label = "Shapley decomposition of explained variation in leaving, NHSBSA LSF survey 2020-2026") +
+    ggplot2::labs(caption = stringr::str_wrap(note, 128)) +
+    ggplot2::theme_void(base_family = fam) +
+    ggplot2::theme(
+      plot.caption = ggplot2::element_text(size = 7.6, colour = grey, hjust = 0,
+                                           family = fam, lineheight = 1.15,
+                                           margin = ggplot2::margin(t = 10)),
+      plot.margin = ggplot2::margin(18, 22, 14, 22),
+      plot.background = ggplot2::element_rect(fill = "white", colour = NA))
+
+  n_rows <- abs(y_bot) + 4
+  ggplot2::ggsave(file, g, width = 8.3, height = 0.235 * n_rows + 1.1,
+                  dpi = dpi, bg = "white")
+  message("wrote ", file)
+  invisible(file)
+}
